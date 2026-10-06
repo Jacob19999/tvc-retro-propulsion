@@ -1,0 +1,7 @@
+bus 32.0 V: available 43.07 N, rho1 24.14 N, W 30.45 N, rho2 36.76 N, thrust rate 7.19 N/s (duty slew 0.1186 /s), tilt-rate bound 12.01 deg/s, emergency rate 242.6 N/s, sink-envelope a 0.711 m/s^2
+plan from [8.0, 5.0, 18.0]: optimal, 8.54 s, 4.967 Wh, gap 1.7e-09, 15 SOCPs in 66 ms (18 IPM iterations in the selected solve), max tilt 6.17 deg, max |v| 4.00 m/s, max thrust rate 7.19 N/s, max horizontal slew 11.33 deg/s
+node-to-node thrust alternation (second difference) in the second half: max 2.09 N
+search: infeasible below 8.50 s; grid minimum 8.50 s (4.9431 Wh) vs line search 8.54 s (4.9668 Wh)
+start [2.0, -1.5, 10.0] v [0, 0, 0]: optimal, 6.33 s, gap 1.4e-09 (node 24: sigma 30.45 N, |u| 30.45 N), 15 SOCPs, 62 ms
+start [20.0, 0.0, 25.0] v [-3.0, 0.0, -2.0]: optimal, 9.95 s, gap 2.2e-09 (node 24: sigma 30.45 N, |u| 30.45 N), 15 SOCPs, 60 ms
+start [-0.28, 0.82, 18.0] v [0, 0, -1.0]: optimal, 8.05 s, gap 2.4e-09 (node 24: sigma 30.45 N, |u| 30.45 N), 16 SOCPs, 66 ms

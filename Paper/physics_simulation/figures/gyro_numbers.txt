@@ -1,0 +1,14 @@
+explicit         120 Hz r=+40: E(2s)/E0 = 1.24112
+explicit         120 Hz r=-40: E(2s)/E0 = 6.83014e+09
+explicit         480 Hz r=+40: E(2s)/E0 = 1.0371
+explicit         480 Hz r=-40: E(2s)/E0 = 75.6829
+rotor_midpoint   120 Hz r=+40: E(2s)/E0 = 0.896467
+rotor_midpoint   120 Hz r=-40: E(2s)/E0 = 1.60314e+08
+rotor_midpoint   480 Hz r=+40: E(2s)/E0 = 0.943304
+rotor_midpoint   480 Hz r=-40: E(2s)/E0 = 28.0365
+coupled          120 Hz r=+40: E(2s)/E0 = 1
+coupled          120 Hz r=-40: E(2s)/E0 = 1
+coupled          480 Hz r=+40: E(2s)/E0 = 1
+coupled          480 Hz r=-40: E(2s)/E0 = 1
+world L drift after 2 s (exp): 7.854e-02 N m s
+world L drift after 2 s (cayley): 1.048e-15 N m s
