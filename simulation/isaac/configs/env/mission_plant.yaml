@@ -34,17 +34,21 @@ dynamics:
   # with; the air the intake swallows arrives at the vehicle's air-relative
   # velocity and is turned onto the duct axis. At hover (mdot ~0.3 kg/s) that
   # is 0.3 N per m/s crosswise, ~10x the body's form drag at 1 m/s. The inlet
-  # lip is the top of the USD body mesh, 0.11 m above the Body origin (0.10 m
-  # above the COM), so a crosswind also pitches the vehicle away from it.
+  # is the duct lip, measured in the USD mesh (tools/measure_duct_stations.py,
+  # 2026-10-05): the duct wall is a continuous ring from FRD z -0.017 to
+  # +0.055 m, with the fan blade tips at the Body origin. 2026-09-29 placed
+  # the inlet at the top of the whole mesh (-0.11 m), which is a frame
+  # cross-bar on discrete rods, not the duct: that made the intake's crosswind
+  # pitching lever 0.10 m instead of 0.007 m above the COM (10x the moment).
   inlet_momentum_drag:
     enabled: true
-    inlet_position_frd: [0.0, 0.0, -0.11]
+    inlet_position_frd: [0.0, 0.0, -0.017]
     # Coriolis reaction of the duct flow, -2 mdot w x (exit - inlet) at the duct
-    # midpoint (review 2026-10-03, Paper/physics_simulation Sec. VI-C). The
-    # intake term alone damps transverse rotation by mdot l_in^2 about the COM
-    # (3.2e-3 N m s/rad at hover); with this reaction the duct gives the
-    # classical jet damping mdot l_exit^2 (1.1e-3), set by the nozzle station.
-    # Not yet re-flown in Isaac; false restores the 2026-09-29 plant. The
-    # nozzle station is the coupled jet's exit (z = 0.05 m); confirm from CAD.
+    # midpoint (review 2026-10-03, Paper/physics_simulation Sec. VI-C). With it
+    # the intake and duct together damp transverse rotation by the classical
+    # jet damping mdot l_exit^2 about the COM (1.1e-3 N m s/rad at hover),
+    # which depends on the nozzle station only. Not yet re-flown in Isaac;
+    # false leaves the intake term alone. The nozzle station is the duct exit
+    # in the USD mesh (+0.055 m), here the coupled jet's exit (0.05 m).
     duct_coriolis: true
     duct_exit_position_frd: [0.0, 0.0, 0.05]

@@ -74,7 +74,7 @@ Isaac open-loop tests reproduce the nutation frequency, precession rate and mome
 The production planner lands from an offset start in 15 SOCPs and about \SI{70}{\milli\second}.
 Its energy optimum sits at the edge of feasibility, because hover power dominates.
 The earlier proportional-derivative attitude law is unstable on the corrected plant above 67\% rotor speed, where the LQR is stable.
-The review corrects an omitted internal-duct Coriolis term, makes sensor-latency rounding at the \SI{120}{\hertz} mission step explicit, and guards the planner against a convexification gap that the thrust-rate bound can open.
+The review corrects an omitted internal-duct Coriolis term and a misplaced intake station, makes sensor-latency rounding at the \SI{120}{\hertz} mission step explicit, and guards the planner against a convexification gap that the thrust-rate bound can open.
 It also lists the parameters that must be identified on hardware.
 \end{abstract}
 
@@ -203,13 +203,13 @@ COM offset (FRD) & $(0,0,-0.01)$\,\si{\metre} & Estimate \\
 Length, diameter & 0.35, \SI{0.12}{\metre} & Measured \\
 Axial, crossflow area & 0.011, \SI{0.042}{\metre\squared} & Derived \\
 Drag coefficients $C_d$, $C_{d,\perp}$ & 1.0, 1.0 & Estimate \\
-Intake station (FRD $z$) & \SI{-0.11}{\metre} & USD mesh \\
+Intake station (FRD $z$) & \SI{-0.017}{\metre} & USD (lip) \\
 \addlinespace
 \multicolumn{3}{l}{\emph{Jet vanes}} \\
 Area $S$, travel & \SI{0.002}{\metre\squared}, \SI{\pm0.262}{\radian} & Measured \\
 COP $(r_v, 0, z_v)$ & $(0.04, 0, 0.10)$\,\si{\metre} & Estimate \\
 $C_{N_\alpha}$, $C_{D_0}$, $k_{\text{duct}}$ & \SI{3.5}{\per\radian}, 0.05, 1.3 & Estimate \\
-Nozzle station (FRD $z$) & \SI{0.05}{\metre} & Estimate \\
+Nozzle station (FRD $z$) & \SI{0.05}{\metre} & USD (exit) \\
 \addlinespace
 \multicolumn{3}{l}{\emph{Propulsion}} \\
 Static thrust $T_{\max}$ & \SI{48}{\newton} & Planning est. \\
@@ -620,7 +620,12 @@ That exerts the ram or momentum drag familiar from ducted-fan vehicles~\cite{joh
 \vect{F}_{\text{in}} = -\mdot\left(\vect{v}_{\text{rel}} + \wb\times(\vect{r}_{\text{in}} - \vect{r}_c)\right),
 \label{eq:intake}
 \end{equation}
-applied at the intake lip $\vect{r}_{\text{in}}$, \SI{0.10}{\metre} above the COM $\vect{r}_c$.
+applied at the intake lip $\vect{r}_{\text{in}}$, \SI{0.007}{\metre} above the COM $\vect{r}_c$.
+The stations come from the authored geometry.
+A measurement script finds the band of mesh points at the duct radius that covers the full circle.
+It runs from FRD $z = \SI{-0.017}{\metre}$, the lip, to \SI{+0.055}{\metre}, the nozzle exit, with the fan blade tips at the Body origin and nothing inside the duct radius above the lip.
+The vanes span \SI{+0.083}{} to \SI{+0.167}{\metre}, entirely in the free jet, as the vane model assumes.
+The plant had placed the intake at the top of the whole mesh, \SI{-0.11}{\metre}, which is a frame cross-bar on discrete rods; a geometry test now pins the station.
 The mass flow is the coupled jet's own.
 The force reads the same wind sample as the body drag, so gusts load the intake as well.
 Its power $\vect{F}_{\text{in}}\cdot\vect{v}_{\text{in}} = -\mdot\|\vect{v}_{\text{in}}\|^2$, with $\vect{v}_{\text{in}}$ the bracket in \refeq{eq:intake}, is never positive.
@@ -629,9 +634,11 @@ Along the axis it is the leading-order thrust lapse in a climb and the thrust ga
 \reffig{fig:drag} gives the crosswise force budget at hover.
 Intake drag grows linearly and body drag quadratically, so they are equal at $v = 2\mdot/(\rho C_{d,\perp}A_\perp) = \SI{12.3}{\metre\per\second}$.
 At \SI{1}{\metre\per\second} the intake force is 12.3 times the body's.
-In a \SI{4}{\metre\per\second} wind it is \SI{1.26}{\newton}, applied with a moment of \SI{0.13}{\newton\metre} about the COM, about a third of the vanes' full-deflection authority at hover.
-The plant previously omitted it entirely.
-Re-flying a recorded station-keeping mission on the corrected plant changed it markedly.
+In a \SI{4}{\metre\per\second} wind it is \SI{1.26}{\newton}.
+Because the lip sits almost at the COM, its moment is only \SI{0.009}{\newton\metre}, 2\% of the vanes' full-deflection authority at hover.
+With the earlier frame-top station the same force carried \SI{0.13}{\newton\metre}, about a third of that authority.
+The plant previously omitted the force entirely.
+Re-flying a recorded station-keeping mission with it, at the earlier station, changed the mission markedly.
 The vehicle now leans \SI{5.5}{\degree} into a \SI{4}{\metre\per\second} wind and holds within \SI{0.40}{\metre}.
 Before, it held within \SI{0.045}{\metre}, because the wind barely reached it.
 
@@ -682,8 +689,8 @@ Legacy linear damper (removed) & 2.70e-1 & 2.70e-1 \\
 \addlinespace
 Cylinder crossflow drag at \SI{1}{\radian\per\second} & 3.45e-5 & {0} \\
 Vane flow damping & 8.94e-4 & 5.05e-4 \\
-Intake momentum drag, $\mdot\ell_{\text{in}}^2$ & 3.16e-3 & {0} \\
-Duct Coriolis reaction \refeq{eq:coriolis} & -2.02e-3 & {0} \\
+Intake momentum drag, $\mdot\ell_{\text{in}}^2$ & 1.55e-5 & {0} \\
+Duct Coriolis reaction \refeq{eq:coriolis} & 1.12e-3 & {0} \\
 Modeled total & 2.07e-3 & 5.05e-4 \\
 \bottomrule
 \end{tabular}
@@ -704,14 +711,14 @@ This is the classical jet-damping moment, which depends only on the nozzle stati
 The two terms also combine into a passive pair.
 With $\vect{v}$ the air-relative velocity of the COM, their total power is $-\mdot\|\vect{v} + \wb\times\vect{r}_e\|^2$, so together they act like momentum drag at the nozzle.
 Until this revision the simulator included the intake term alone.
-With the inlet \SI{0.10}{\metre} above and the configured nozzle \SI{0.06}{\metre} below the COM, the duct reaction is \SI{-2.0e-3}{\newton\metre\second\per\radian} of damping.
-Leaving it out had doubled the passive pitch and roll damping.
+With the measured stations, the lip \SI{0.007}{\metre} above and the nozzle \SI{0.06}{\metre} below the COM, the intake term is negligible and the duct reaction supplies \SI{1.12e-3}{\newton\metre\second\per\radian} of damping that the plant lacked.
+With the earlier frame-top station, \SI{0.10}{\metre} above the COM, the intake term alone gave \SI{3.16e-3}{} and the reaction \SI{-2.02e-3}{\newton\metre\second\per\radian}.
+The total is the same either way, which is the point of the classical result: the duct's damping is insensitive to the intake station once both terms are present.
 The mission plant now applies \refeq{eq:coriolis} beside the intake force, behind a configuration switch.
 Unit tests check the integral, the classical moment and the passivity identity, and the environment's wiring through a stand-in vehicle.
 The change has not yet been re-flown in Isaac.
-If the effective exit were the vane plane, \SI{0.11}{\metre} below the COM, the duct reaction would add \SI{0.7e-3}{\newton\metre\second\per\radian} of damping instead, so the nozzle station should be confirmed from the CAD.
 Either way the term is three orders of magnitude below the vane authority, and the closed-loop regulator, designed for zero damping, dominates it.
-It does, however, set a falsifiable prediction for a free-flight test: a nutation decay of \SI{0.041}{\per\second}, against \SI{0.081}{\per\second} for the intake term alone.
+It does, however, set a falsifiable prediction for a free-flight test: a nutation decay of \SI{0.041}{\per\second}, against \SI{0.081}{\per\second} for the earlier intake-only plant.
 
 \subsection{Wind, Gusts and Center-of-Mass Offset}
 \label{sec:disturbances}
@@ -1300,9 +1307,9 @@ The dotted line marks hover.}
 \subsection{Test Ladder}
 
 Verification is layered.
-The first layer is 40 unit-test modules of pure-tensor checks.
+The first layer is 41 unit-test modules of pure-tensor checks.
 They cover frames, quaternions, fin geometry, the servo, the EDF and battery, the coupled jet's conservation and passivity, rotor reactions, the gyroscopic midpoint, the wind model, intake drag, the contact state machine, crash and reset logic, the IMU, navigation filter and Allan-variance fit, and controller and mission code.
-For this review the suite was run on a CPU-only machine with Python~3.12 and PyTorch~2.14, and 433 tests passed, including the ten added with the corrections of \refsec{sec:issues}.
+For this review the suite was run on a CPU-only machine with Python~3.12 and PyTorch~2.14, and 436 tests passed, including the twelve added with the corrections of \refsec{sec:issues}; with the USD bindings installed none was skipped.
 One was skipped because the USD bindings were unavailable.
 The second layer is 19 Isaac tests, which require the simulator.
 They progress from asset validation, joint axes and single-vane articulation, through unit forces at COPs, vane sweeps, four-vane superposition, spool and gyroscopic precession, wind, contact, a PID hover and a 128-environment API check, to the review-specific regressions.
@@ -1403,12 +1410,17 @@ It was qualitatively easier than the vehicle it represents.
 \subsection{Issues Identified in This Review and Their Status}
 \label{sec:issues}
 
-\textbf{(i) Duct Coriolis reaction: corrected.}
+\textbf{(i) Duct stations and Coriolis reaction: corrected.}
 The intake momentum drag had been modeled without the Coriolis reaction of the duct flow, which doubled the passive pitch and roll damping.
-The mission plant now applies \refeq{eq:coriolis} (\refsec{sec:damping}).
-Two tasks remain.
-The change should be re-flown in Isaac.
-The nozzle station should be confirmed from the CAD, because the configured jet exit at \SI{0.05}{\metre} and the vane COP plane at \SI{0.10}{\metre} disagree.
+Its station had also been taken from the top of the frame, \SI{0.10}{\metre} above the COM, instead of the duct lip, \SI{0.007}{\metre} above it.
+That overstated the intake's crosswind pitching moment fourteen-fold.
+The mission plant now applies \refeq{eq:coriolis} at the measured stations (\refsec{sec:intake}, \refsec{sec:damping}).
+The USD geometry also confirms the configured nozzle exit and places the vanes in the free jet.
+Both changes should be re-flown in Isaac.
+The same measurement shows one parameter left as an estimate.
+The vane span runs from \SI{0.019}{} to \SI{0.047}{\metre} in radius, so its area centroid lies at \SI{0.033}{\metre}, against the configured COP radius of \SI{0.040}{\metre}.
+Yaw authority scales with that radius \refeq{eq:authority}, so the plant may overstate it by up to 17\%.
+The effective radius also depends on the jet's radial velocity profile, so it is left for the thrust-stand vane sweep rather than changed here.
 
 \textbf{(ii) Sensor timing at the mission step: now reported.}
 The IMU and aiding sensors round latency to whole physics substeps and cannot report faster than the physics.
@@ -1488,7 +1500,7 @@ The intake dominates low-speed crosswise drag.
 The physical passive damping is two orders of magnitude below the tuned value it replaced.
 The convex guidance takes its bounds from the same physics.
 The rotor's momentum sets the thrust-rate and attitude-slew limits, the battery sets the thrust ceiling, and the vane authority sets the gyroscopic LQR that replaced an attitude law the corrected plant made unstable.
-The review corrected the duct's jet-damping bookkeeping, made sensor timing at the mission step explicit, guarded the planner against a convexification gap, and fixed documentation that misattributed results.
+The review corrected the duct's jet-damping bookkeeping and its intake station, made sensor timing at the mission step explicit, guarded the planner against a convexification gap, and fixed documentation that misattributed results.
 It also leaves a concrete list of measurements.
 The most important are an Isaac re-flight of the corrected plant and a thrust-stand vane sweep that tests the streamtube assumption on which the model's vane authority rests.
 
@@ -1503,6 +1515,7 @@ The helper \texttt{plant.py} builds the mission-plant models from \texttt{config
 Each prints the numbers quoted in the text.
 The guidance scripts build the flight computer's vehicle model and controller exactly as the mission runner does.
 The printed outputs are saved beside the figures.
+The duct stations come from \texttt{tools/measure\_duct\_stations.py} in \texttt{simulation/isaac}, which needs the USD Python bindings.
 The scripts need PyTorch, NumPy, SciPy, PyYAML, Matplotlib and, for the guidance figures, Clarabel, but not Isaac Sim.
 The unit tests run with \texttt{pytest} from \texttt{simulation/isaac}, and the Isaac tests with \texttt{apps/run\_single\_test.py}.
 \par}

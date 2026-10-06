@@ -11,6 +11,14 @@ and not repeated.
 
 ## Physics findings
 
+> 2026-10-05 correction to finding 1: the inlet station was wrong. The top of the USD body
+> mesh (FRD z -0.11 m) is a frame cross-bar on discrete rods, not the duct. The duct wall is a
+> continuous ring from FRD z -0.017 m (the lip) to +0.055 m (the nozzle exit), measured with
+> `tools/measure_duct_stations.py`; the mission plant now uses -0.017 m. The intake force is
+> unchanged, but its crosswind pitching lever is 0.007 m above the COM, not 0.10 m: 0.009 N m at
+> 4 m/s instead of 0.12 N m. The duct Coriolis reaction added on 2026-10-03 makes the duct's
+> rotational damping depend on the nozzle station only (Paper/physics_simulation, Sec. VI).
+
 | # | Finding | Effect | Change |
 | --- | --- | --- | --- |
 | 1 | **No intake momentum ("ram") drag.** Thrust is `k_T omega^2` at any airspeed, and the only aerodynamic force on a translating vehicle was body form drag. The duct swallows `mdot` kg/s of air that arrives at the vehicle's air-relative velocity and is turned onto the duct axis, which costs `-mdot v_rel`. | At hover on the planned 8S vehicle `mdot` is ~0.30 kg/s: 0.30 N per m/s crosswise, ~10x the body's form drag at 1 m/s (they are equal near 12 m/s). In the 4 m/s steady wind of the gust missions that is 1.2 N the plant never saw, applied at the intake lip 0.10 m above the COM: 0.12 N m at 4 m/s, about a third of the ~0.35 N m the momentum vanes make at hover rotor speed. | `propulsion_edf.inlet_momentum_drag`; `dynamics.inlet_momentum_drag` (enabled in the mission plant, inlet at FRD z = -0.11 m, the top of the USD body mesh). Mass flow is the coupled jet's own (`T/u`). The force uses inlet velocity relative to the wind, including `w x (inlet - COM)`, so gusts load the intake as well as the body. Its power `-mdot v_rel^2` is never positive. |

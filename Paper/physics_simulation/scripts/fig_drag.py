@@ -80,5 +80,5 @@ for name in ("roll", "yaw"):
 print(f"  legacy linear damper                    {0.27:.3e}")
 print(f"  classical jet damping mdot*l_e^2, l_e={exit_z:.2f}..{vane_z:.2f} m: "
       f"{float(mdot) * exit_z ** 2:.3e} .. {float(mdot) * vane_z ** 2:.3e}")
-print(f"  duct Coriolis term mdot*(l_i^2-l_e^2), by exit station: "
-      f"{float(mdot) * (l_in ** 2 - vane_z ** 2):+.3e} .. {float(mdot) * (l_in ** 2 - exit_z ** 2):+.3e}")
+print(f"  duct Coriolis damping mdot*(l_e^2-l_in^2) for the same exit stations: "
+      f"{float(mdot) * (exit_z ** 2 - l_in ** 2):+.3e} .. {float(mdot) * (vane_z ** 2 - l_in ** 2):+.3e}")

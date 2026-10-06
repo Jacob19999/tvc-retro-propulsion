@@ -36,6 +36,7 @@ The dominant physical obstacle is **rotor–body angular-momentum exchange**: ev
 - **IMU measurement model** ([imu_model.md](simulation/isaac/docs/imu_model.md)). An opt-in chain models the WTGAHRS1: sensor bias and drift, 20 Hz low-pass, output rate, latency and an onboard attitude filter. Most parameters are placeholders until bench data exists (`tools/imu_allan_variance.py`).
 - **Review 2026-10-03** ([physics and simulation paper](Paper/physics_simulation/physics_simulation.tex)).
   - The duct flow's Coriolis reaction completes the intake-drag jet-damping bookkeeping (`dynamics.inlet_momentum_drag.duct_coriolis`; not yet re-flown in Isaac).
+  - The intake station is the duct lip measured from the USD mesh (FRD z -0.017 m, `tools/measure_duct_stations.py`), not the top of the frame; this cut the intake's crosswind pitching moment 14x.
   - Sensor models report the latency and output rate the physics grid actually delivers (`sensor_timing` in mission metadata) and warn when rounding is material.
   - The planner rejects plans whose lossless relaxation is not tight, which the thrust-rate bound could cause.
 - **Mission Control** ([mission_control.md](simulation/isaac/docs/mission_control.md)). A local web console (`simulation/isaac/mission_control/start.ps1`, http://127.0.0.1:8830) plans and launches Isaac missions with convex guidance. It replays telemetry on a 3D vehicle model and shows convex-guidance diagnostics.

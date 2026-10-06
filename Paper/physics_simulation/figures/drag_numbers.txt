@@ -1,11 +1,11 @@
-hover fraction 0.8409, mdot 0.3157 kg/s, inlet-to-COM -0.100 m
+hover fraction 0.8409, mdot 0.3157 kg/s, inlet-to-COM -0.007 m
 intake = body crossflow drag at 12.50 m/s; at 1 m/s ratio 12.3
-at 4 m/s: intake 1.263 N, body 0.412 N, old iso 0.196 N, old calm 0.108 N; intake moment 0.126 N m
+at 4 m/s: intake 1.263 N, body 0.412 N, old iso 0.196 N, old calm 0.108 N; intake moment 0.009 N m
 rotational damping coefficients (N m s/rad), hover:
   vane flow, roll                          8.937e-04
   cylinder crossflow, roll (at 1 rad/s)    3.447e-05
-  intake momentum drag, roll               3.157e-03
-  duct Coriolis reaction, roll             -2.020e-03
+  intake momentum drag, roll               1.547e-05
+  duct Coriolis reaction, roll             1.121e-03
   vane flow, yaw                           5.049e-04
   cylinder crossflow, yaw (at 1 rad/s)     -0.000e+00
   intake momentum drag, yaw                0.000e+00
@@ -14,4 +14,4 @@ rotational damping coefficients (N m s/rad), hover:
   modelled total, yaw                                5.049e-04   (legacy damper / total: 535x; nutation decay c/I_xx 0.010 /s)
   legacy linear damper                    2.700e-01
   classical jet damping mdot*l_e^2, l_e=0.06..0.11 m: 1.137e-03 .. 3.820e-03
-  duct Coriolis term mdot*(l_i^2-l_e^2), by exit station: -6.630e-04 .. +2.020e-03
+  duct Coriolis damping mdot*(l_e^2-l_in^2) for the same exit stations: +1.121e-03 .. +3.804e-03
