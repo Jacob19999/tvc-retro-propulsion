@@ -1307,9 +1307,9 @@ The dotted line marks hover.}
 \subsection{Test Ladder}
 
 Verification is layered.
-The first layer is 41 unit-test modules of pure-tensor checks.
+The first layer is 42 unit-test modules of pure-tensor checks.
 They cover frames, quaternions, fin geometry, the servo, the EDF and battery, the coupled jet's conservation and passivity, rotor reactions, the gyroscopic midpoint, the wind model, intake drag, the contact state machine, crash and reset logic, the IMU, navigation filter and Allan-variance fit, and controller and mission code.
-For this review the suite was run on a CPU-only machine with Python~3.12 and PyTorch~2.14, and 436 tests passed, including the twelve added with the corrections of \refsec{sec:issues}; with the USD bindings installed none was skipped.
+For this review the suite was run on a CPU-only machine with Python~3.12 and PyTorch~2.14, and 440 tests passed, including the sixteen added with the corrections of \refsec{sec:issues} and the re-flight tool; with the USD bindings installed none was skipped.
 One was skipped because the USD bindings were unavailable.
 The second layer is 19 Isaac tests, which require the simulator.
 They progress from asset validation, joint axes and single-vane articulation, through unit forces at COPs, vane sweeps, four-vane superposition, spool and gyroscopic precession, wind, contact, a PID hover and a 128-environment API check, to the review-specific regressions.
@@ -1417,6 +1417,7 @@ That overstated the intake's crosswind pitching moment fourteen-fold.
 The mission plant now applies \refeq{eq:coriolis} at the measured stations (\refsec{sec:intake}, \refsec{sec:damping}).
 The USD geometry also confirms the configured nozzle exit and places the vanes in the free jet.
 Both changes should be re-flown in Isaac.
+A re-flight tool restores each recorded mission of \reftab{tab:missions} and the two 2026-09-29 re-flights from its request, flies it on the current plant, and reports the outcome changes and every dynamics setting that differs from the recording (\texttt{tools/refly\_missions.py --benchmark}).
 The same measurement shows one parameter left as an estimate.
 The vane span runs from \SI{0.019}{} to \SI{0.047}{\metre} in radius, so its area centroid lies at \SI{0.033}{\metre}, against the configured COP radius of \SI{0.040}{\metre}.
 Yaw authority scales with that radius \refeq{eq:authority}, so the plant may overstate it by up to 17\%.

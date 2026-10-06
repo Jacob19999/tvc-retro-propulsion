@@ -43,6 +43,7 @@ The dominant physical obstacle is **rotor–body angular-momentum exchange**: ev
 
 ### Next steps
 
+- Re-fly the convex benchmark on the corrected plant (duct stations, duct Coriolis reaction, planner gap guard): from `simulation/isaac` with the Isaac Python, `python tools/refly_missions.py --benchmark` (`--dry-run` first lists the plant changes against each recording)
 - Measure EDF rotor inertia and servo deadband on hardware, then begin HIL integration
 - Characterize the WTGAHRS1 on the bench and replace the IMU model's placeholder parameters
 - Wire the IMU model into mission control and fly convex missions with it enabled

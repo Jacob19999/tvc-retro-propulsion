@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .models import ROOT, DEFAULTS, validate_mission, default_mission, convex_available, braking_envelopes
+from .models import read_json, recorded_request
 
 HERE = Path(__file__).resolve().parent
 CONVEX_LABEL = 'CONVEX · SOCP powered-descent guidance'
@@ -94,30 +95,6 @@ async def local_write_guard(request: Request, call_next):
         if int(request.headers.get('content-length', '0')) > limit:
             return JSONResponse({'detail': 'Request too large'}, status_code=413)
     return await call_next(request)
-
-
-def read_json(path, default=None):
-    try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return default
-
-
-def recorded_request(path, metadata=None):
-    """Restore diagnostic requests from their recorded, resolved parameters."""
-    if metadata is None:
-        metadata = read_json(path / 'metadata.json', {}) or {}
-    resolved = dict(metadata.get('request') or {})
-    supplied = read_json(path / 'request.json', {}) or {}
-    battery = {**resolved.get('battery', {}), **supplied.get('battery', {})}
-    resolved.update(supplied)
-    if battery:
-        resolved['battery'] = battery
-    if 'vane_model' not in resolved and 'dynamics' in metadata:
-        # Recorded before the field existed: report the plant actually flown.
-        coupled = ((metadata['dynamics'] or {}).get('coupled_jet') or {}).get('enabled')
-        resolved['vane_model'] = 'momentum' if coupled else 'legacy'
-    return resolved
 
 
 def directory(mid):
