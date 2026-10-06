@@ -39,3 +39,12 @@ dynamics:
   inlet_momentum_drag:
     enabled: true
     inlet_position_frd: [0.0, 0.0, -0.11]
+    # Coriolis reaction of the duct flow, -2 mdot w x (exit - inlet) at the duct
+    # midpoint (review 2026-10-03, Paper/physics_simulation Sec. VI-C). The
+    # intake term alone damps transverse rotation by mdot l_in^2 about the COM
+    # (3.2e-3 N m s/rad at hover); with this reaction the duct gives the
+    # classical jet damping mdot l_exit^2 (1.1e-3), set by the nozzle station.
+    # Not yet re-flown in Isaac; false restores the 2026-09-29 plant. The
+    # nozzle station is the coupled jet's exit (z = 0.05 m); confirm from CAD.
+    duct_coriolis: true
+    duct_exit_position_frd: [0.0, 0.0, 0.05]

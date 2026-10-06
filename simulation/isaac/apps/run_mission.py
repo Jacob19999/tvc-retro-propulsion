@@ -71,8 +71,8 @@ def main():
         status.update(values, wall_time_s=round(time.time() - started, 2))
         atomic_json(output / 'status.json', status)
     update()
-    # 480 Hz physics and up to 600 simulated seconds can exceed the old
-    # fixed 8-minute watchdog. Keep an explicit finite allowance per request.
+    # Up to 600 simulated seconds (120 Hz physics, configs/env/single_env_debug.yaml)
+    # can exceed the old fixed 8-minute watchdog. Keep an explicit finite allowance per request.
     watchdog = WallClockWatchdog(max(480, request['duration_s'] * 45), label='Mission control simulation')
     watchdog.start()
     env = app = convex = None
@@ -111,7 +111,7 @@ def main():
         overrides = deep_merge(overrides, vane_model_overrides(request))
         if request['cpu_physics']:
             # One articulation: the GPU pipeline spends a live mission's wall
-            # time on kernel launches and host syncs at every 480 Hz substep.
+            # time on kernel launches and host syncs at every (120 Hz) physics substep.
             # CPU PhysX keeps the step size, TGS solver, iteration counts and
             # contact offsets; only the device changes (results are not
             # bit-identical to GPU PhysX, notably contact generation).
@@ -192,6 +192,9 @@ def main():
                         disturbances=config.config['disturbances'],
                         fin_link_names=env._art_map.fin_link_names,
                         physics_parameters=env._resolved_hardware,
+                        # Sensor rates and latencies as the physics grid delivers them (datasheet values are rounded).
+                        sensor_timing=(None if env._imu is None else dict(
+                            imu=env._imu.timing, **(env._fusion.timing if env._fusion is not None else {}))),
                         dynamics=config.config.get('dynamics', {}),
                         physics=config.config.get('physics', {}),
                         vane_model=('momentum' if config.config.get('dynamics', {}).get('coupled_jet', {}).get('enabled')

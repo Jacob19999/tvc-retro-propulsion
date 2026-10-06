@@ -22,8 +22,8 @@ VANE_MODELS = ('momentum',)
 HOME_PAD = dict(name='Home pad', position=[0., 0., 0.])
 MAX_PADS = 4
 PAD_SEPARATION_M = 3.   # pad markings are 2.5 m across
-# 10 simulated minutes: the 8S 5 Ah pack hovers for roughly 6 minutes, so
-# the battery, not the clock, bounds the longest flights.
+# 10 simulated minutes: the 8S 5 Ah pack hovers for roughly 4 minutes (about
+# 2.1 kW from ~148 Wh), so the battery, not the clock, bounds the longest flights.
 MAX_DURATION_S = 600.
 DEFAULTS = dict(name='Landing test', controller='convex', seed=2026, duration_s=120., fast_live=True, cpu_physics=False,
                 hardware_profile='planned_8s', vane_model='momentum',

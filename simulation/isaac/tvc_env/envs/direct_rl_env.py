@@ -560,6 +560,7 @@ class TVCDirectRLEnv(TVCEnvBase):
         # Intake momentum drag, read against the same wind sample as the body drag below.
         inlet_force_body = torch.zeros_like(edf_force_body)
         inlet_torque_body = torch.zeros_like(edf_force_body)
+        self._duct_coriolis_debug = torch.zeros_like(edf_force_body)
         inlet_cfg = dynamics_cfg.get("inlet_momentum_drag") or {}
         if inlet_cfg.get("enabled", False):
             inlet_force_body, inlet_torque_body = self._inlet_momentum_drag(
@@ -610,7 +611,9 @@ class TVCDirectRLEnv(TVCEnvBase):
                 if wind_force_body is not None
                 else torch.zeros_like(edf_force_body).detach()
             ),
+            # Intake momentum drag plus, when enabled, the duct Coriolis reaction (also listed alone).
             "inlet_momentum_drag_body_frd_N": inlet_force_body.detach(),
+            "duct_coriolis_body_frd_N": self._duct_coriolis_debug.detach(),
         }
         if jet is not None:
             self._last_dynamics_debug.update(
@@ -639,6 +642,8 @@ class TVCDirectRLEnv(TVCEnvBase):
     def _inlet_momentum_drag(self, config, raw_thrust, rotor_fraction, jet, q, pos, body_rate_frd):
         """Intake momentum drag (body FRD) and its moment about the body origin.
 
+        With ``duct_coriolis`` the duct flow's Coriolis reaction is added (a
+        force at the duct midpoint), completing the jet-damping bookkeeping.
         Mass flow is the jet's own (the coupled jet shares shaft power with
         swirl), else T / u with the exhaust speed scaling with rotor speed.
         The inlet moves with the COM velocity plus w x (inlet - COM) and the
@@ -661,7 +666,21 @@ class TVCDirectRLEnv(TVCEnvBase):
         inlet_velocity = (self._body_iface.get_linear_velocity_body_frd(air_velocity_w, q)
                           + torch.linalg.cross(body_rate_frd, inlet[None] - com_frd))
         force = inlet_momentum_drag(mass_flow, inlet_velocity)
-        return force, torch.linalg.cross(inlet.expand_as(force), force)
+        torque = torch.linalg.cross(inlet.expand_as(force), force)
+        if config.get("duct_coriolis", False):
+            # The duct flow's Coriolis reaction, at the duct midpoint. Without it
+            # the intake term alone over-states the duct's jet damping (it gives
+            # mdot l_in^2 instead of mdot l_exit^2 about the COM).
+            from tvc_env.dynamics.propulsion_edf import duct_coriolis_force
+            jet_exit = (self._config.config.get("dynamics", {}).get("coupled_jet", {})
+                        .get("exit_position_frd", [0.0, 0.0, 0.05]))
+            exit_station = raw_thrust.new_tensor(config.get("duct_exit_position_frd", jet_exit))
+            coriolis = duct_coriolis_force(mass_flow, body_rate_frd, inlet, exit_station)
+            midpoint = 0.5 * (inlet + exit_station)
+            force = force + coriolis
+            torque = torque + torch.linalg.cross(midpoint.expand_as(coriolis), coriolis)
+            self._duct_coriolis_debug = coriolis
+        return force, torque
 
     def _correct_freeflight_orientation(self):
         """Complete the coupled Lie-midpoint step outside external contacts.
