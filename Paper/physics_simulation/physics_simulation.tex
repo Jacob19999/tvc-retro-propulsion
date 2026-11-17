@@ -41,7 +41,7 @@
 
 \author{Tang~Zijian~(Jacob~Tang)%
 \thanks{The author is with the Department of Computer and Information Sciences, Minnesota State University, Mankato, MN, USA.}%
-\thanks{Manuscript prepared October 2026. Source code, configuration and the figure scripts are in the project repository (\texttt{simulation/isaac} and \texttt{Paper/physics\_simulation}).}}
+\thanks{Manuscript prepared October 2026; revised November 2026. Source code, configuration and the figure scripts are in the project repository (\texttt{simulation/isaac} and \texttt{Paper/physics\_simulation}).}}
 
 \markboth{Manuscript, October 2026}{Tang: Physics, Simulation and Convex Guidance of a Jet-Vane Thrust-Vectored EDF Vehicle}
 
@@ -74,8 +74,8 @@ Isaac open-loop tests reproduce the nutation frequency, precession rate and mome
 The production planner lands from an offset start in 15 SOCPs and about \SI{70}{\milli\second}.
 Its energy optimum sits at the edge of feasibility, because hover power dominates.
 The earlier proportional-derivative attitude law is unstable on the corrected plant above 67\% rotor speed, where the LQR is stable.
-The review corrects an omitted internal-duct Coriolis term and a misplaced intake station, makes sensor-latency rounding at the \SI{120}{\hertz} mission step explicit, and guards the planner against a convexification gap that the thrust-rate bound can open.
-It also lists the parameters that must be identified on hardware.
+The review corrects an omitted internal-duct Coriolis term and a misplaced intake station, makes sensor-latency rounding at the \SI{120}{\hertz} mission step explicit, and guards the planner against a convexification gap that the thrust-rate bound opens in 20\% of dispersed feasible starts.
+It also lists the parameters that must be identified on hardware, among them the nozzle jet speed, which the plant takes from an open-rotor relation.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -1062,7 +1062,7 @@ Every plan reports the gap $\max_k(\sigma_k - \|\vect{u}_k\|)/\sigma_k$, so loss
 The vehicle-specific constraints leave the hypotheses of that result.
 The thrust-rate bound couples successive controls, which makes thrust effectively a state.
 State constraints are known to break the guarantee in general~\cite{harris2014lcvx}.
-With the production limits, plans from offset starts are lossless to round-off, with gaps of \num{1.4e-9} to \num{2.2e-9}.
+With the production limits, the two offset starts printed by the figure script are lossless to round-off, with gaps of \num{1.4e-9} and \num{2.2e-9}.
 A near-vertical entry descending at \SI{1}{\metre\per\second} from \SI{18}{\metre} is not.
 There the energy-optimal plan ramps thrust down at the rate bound, and for two nodes it uses the slack to place $\|\vect{u}\|$ below $\sigma = \rho_1/m$.
 The planned thrust reaches \SI{23.4}{\newton} against a \SI{24.1}{\newton} floor, a gap of 3.2\%.
@@ -1079,6 +1079,17 @@ For the near-vertical entry the plan becomes lossless (gap \num{2.4e-9}), with a
 It lasts \SI{8.05}{\second} instead of \SI{7.87}{\second} and costs 2\% more energy.
 Plans that were already lossless never trigger the safeguard and are bit-identical to before.
 A regression test reproduces the gap with the mission plant's limits and checks both properties.
+
+The near-vertical entry is not an isolated case.
+A later study planned 400 dispersed starts once each: offsets up to \SI{25}{\metre}, altitudes of 5--\SI{40}{\metre}, horizontal speeds up to \SI{3}{\metre\per\second}, vertical speeds between \SI{-3}{} and \SI{+1}{\metre\per\second} and bus voltages of 26--\SI{33}{\volt}, with the limits re-derived at each voltage.
+Of these, 355 had an optimal plan, and the other 45, low and shallow starts that are infeasible for the state constraints, were planned by the soft-terminal fallback of \refsec{sec:freetime}.
+With the safeguard disabled, 72 of the 355 optimal plans (20\%) had a gap above \num{1e-3}, up to 3.4\%, and none had a gap between \num{1e-6} and \num{1e-3}.
+The mechanism was the same in all 72.
+Early in the plan, while thrust ramps down at the rate bound, one to six nodes place $\|\vect{u}\|$ below a slack that sits on its floor, by a median of \SI{0.65}{\newton} and at most \SI{0.97}{\newton}.
+The gapped starts are steeper than the rest, with a median ratio of offset to altitude of 0.32 against 0.55.
+With the safeguard no optimal plan has a gap above \num{6.3e-4}.
+The repaired plans last a median of \SI{0.29}{\second} longer and cost a median of 2.0\% more energy, 10.3\% at worst.
+The floor restricts the non-convex problem, so a repaired plan is feasible but not necessarily optimal.
 
 \subsection{Constraints}
 \label{sec:constraints}
@@ -1142,7 +1153,7 @@ The independent problems are solved in parallel on four threads.
 Short durations are infeasible, and beyond the feasibility boundary the cost rises almost linearly, at about \SI{0.58}{\watt\hour\per\second}, the hover power.
 For this vehicle, hover power dominates, so the energy-optimal duration sits at the edge of feasibility.
 The plan therefore rides its rate, speed and envelope bounds, and the margins come only from the explicit reserves in \reftab{tab:limits}.
-The search stops \SI{0.04}{\second} short of the boundary, which costs 0.5\% energy.
+The search stops \SI{0.04}{\second} past the boundary, on the feasible side, which costs 0.5\% energy.
 
 If no duration is feasible, for example after a start too fast and too low to stop, a soft-terminal problem minimizes the weighted miss of the gate position and velocity.
 It keeps every actuator constraint, drops the state constraints and treats ground clearance as a heavily penalized constraint.
@@ -1231,7 +1242,7 @@ A duty change that only compensates a bus-voltage change therefore passes at onc
 Slewing the raw duty had held that compensation back on warm starts, spinning the rotor down and yawing the body.
 
 The lateral loop has a subtlety specific to jet vanes.
-The vanes push the vehicle sideways directly, at about \SI{59}{\metre\per\second\squared} per radian of effort.
+The vanes push the vehicle sideways directly, at $Kf_h^2/(\ell_z m) \approx \SI{4.9}{\metre\per\second\squared}$ per radian of effort at hover on the momentum-vane plant; the \SI{59}{\metre\per\second\squared} per radian identified earlier belonged to the legacy vanes.
 That push opposes the tilt they command, which makes the lateral response non-minimum-phase.
 A linear hover model of the complete loop shows that this side force caps the usable velocity gain.
 At $k_d = 1.2$ the loop is damped at $\zeta = 0.37$; at 1.6 the damping falls to 0.03 when the whole feedback correction is fed forward into the attitude loop.
@@ -1310,7 +1321,6 @@ Verification is layered.
 The first layer is 42 unit-test modules of pure-tensor checks.
 They cover frames, quaternions, fin geometry, the servo, the EDF and battery, the coupled jet's conservation and passivity, rotor reactions, the gyroscopic midpoint, the wind model, intake drag, the contact state machine, crash and reset logic, the IMU, navigation filter and Allan-variance fit, and controller and mission code.
 For this review the suite was run on a CPU-only machine with Python~3.12 and PyTorch~2.14, and 440 tests passed, including the sixteen added with the corrections of \refsec{sec:issues} and the re-flight tool; with the USD bindings installed none was skipped.
-One was skipped because the USD bindings were unavailable.
 The second layer is 19 Isaac tests, which require the simulator.
 They progress from asset validation, joint axes and single-vane articulation, through unit forces at COPs, vane sweeps, four-vane superposition, spool and gyroscopic precession, wind, contact, a PID hover and a 128-environment API check, to the review-specific regressions.
 Those regressions cover net lift and soft contact, the coupled jet in PhysX, thrust-line torque with an offset COM, heading invariance and gyroscopic conservation.
@@ -1467,18 +1477,31 @@ The PhysX gravity (\SI{9.81}{\metre\per\second\squared}) and the IMU's standard 
 
 \textbf{(vii) Guidance: gap guarded, other items open.}
 Lossless convexification is checked, not guaranteed.
-The thrust-rate bound could open a convexification gap, which the planner now guards against (\refsec{sec:lcvx}).
+The thrust-rate bound opens a convexification gap in 20\% of dispersed feasible starts, which the planner now guards against at a median energy cost of 2\% on those starts (\refsec{sec:lcvx}).
 Node-to-node thrust alternation appears while the sink envelope binds; a small smoothness weight removes it.
 The planner's point-mass model contains no aerodynamics.
 Intake momentum drag, \SI{1.26}{\newton} or 4\% of weight in a \SI{4}{\metre\per\second} wind, reaches the plan only through the tracking integrators.
 A drag-aware dynamics term, which is linear in velocity and so stays convex, would let the plan anticipate it.
 Finally, the measured planning latency on the target flight computer, estimated at 0.2--\SI{0.4}{\second} for a landing plan and 2--\SI{3.5}{\second} for a four-waypoint route, should be validated in Isaac with the latency model before flight.
 
+\textbf{(viii) Jet-speed convention: open.}
+The plant takes the nozzle jet speed from $\sqrt{2T/\rho A}$ with the fan's swept area $A = \SI{4780}{\milli\metre\squared}$.
+That is the far-wake speed of an open rotor, whose slipstream contracts to half the disk area.
+A duct prevents the contraction, and a ducted fan whose exit area is about the swept area exhausts at $\sqrt{T/\rho A}$, \SI{90.5}{\metre\per\second} instead of \SI{128}{\metre\per\second}.
+The \SI{3072}{\watt} reference shaft power then corresponds to a fan efficiency of 0.71 rather than to an ideal jet.
+Rebuilding the production models with the ducted speed changes the quantities that scale with mass flow and leaves those that scale with thrust nearly alone.
+The hover mass flow rises by 38\%, from 0.316 to \SI{0.434}{\kilogram\per\second}.
+Intake drag in a \SI{4}{\metre\per\second} wind rises from 1.26 to \SI{1.74}{\newton}, its crossover with body drag moves from 12.3 to \SI{16.9}{\metre\per\second}, and the jet-damping moment $\mdot z_e^2$ rises from \num{1.14e-3} to \SI{1.56e-3}{\newton\metre\second\per\radian}.
+The vane loading halves to $\lambda = 3.8$, the vanes' axial loss falls from 10.3\% to 5.3\% of static thrust, and the hover rotor fraction falls from 0.841 to 0.818.
+Vane authority rises by only 3.1\%, as \refeq{eq:authority} predicts.
+The control and guidance results of this paper therefore depend little on the choice, but the modeled wind response does.
+The numbers in \refsec{sec:reactions}, \refsec{sec:closedform}, \refsec{sec:intake} and \refsec{sec:damping} use the open-rotor value, and the plant is left unchanged until the exit area is measured and the jet speed confirmed with a pitot traverse.
+
 \subsection{Identification Plan for Transfer}
 
 The open parameters group into a short list of bench experiments, each of which replaces estimates in \reftab{tab:params}.
 \begin{itemize}
-\item A thrust stand, static and in a wind tunnel or moving cart, for $T(\wrot, V)$, $P(\wrot)$, the inflow thrust lapse and the vane sweep $F_\perp/(T/4)$ and $\delta_D$.
+\item A thrust stand, static and in a wind tunnel or moving cart, for $T(\wrot, V)$, $P(\wrot)$, the jet speed, the inflow thrust lapse and the vane sweep $F_\perp/(T/4)$ and $\delta_D$.
 \item A rotor spin-down for $\Ir$ and $Q_a$, since the coast time constant is $\Ir\wrot/Q_a$, and a step response for the current-limited spool.
 \item A loaded servo response for $\tau_s$, the slew rate, the deadband and the drive stiffness.
 \item A pack discharge at hover power for $E(\mathrm{SOC})$, $R_0$, $R_p$ and $\tau_p$.
@@ -1501,9 +1524,9 @@ The intake dominates low-speed crosswise drag.
 The physical passive damping is two orders of magnitude below the tuned value it replaced.
 The convex guidance takes its bounds from the same physics.
 The rotor's momentum sets the thrust-rate and attitude-slew limits, the battery sets the thrust ceiling, and the vane authority sets the gyroscopic LQR that replaced an attitude law the corrected plant made unstable.
-The review corrected the duct's jet-damping bookkeeping and its intake station, made sensor timing at the mission step explicit, guarded the planner against a convexification gap, and fixed documentation that misattributed results.
+The review corrected the duct's jet-damping bookkeeping and its intake station, made sensor timing at the mission step explicit, guarded the planner against a convexification gap that opens in a fifth of dispersed feasible starts, and fixed documentation that misattributed results.
 It also leaves a concrete list of measurements.
-The most important are an Isaac re-flight of the corrected plant and a thrust-stand vane sweep that tests the streamtube assumption on which the model's vane authority rests.
+The most important are an Isaac re-flight of the corrected plant, a thrust-stand vane sweep that tests the streamtube assumption on which the model's vane authority rests, and a measurement of the jet speed, which sets the modeled wind response.
 
 \appendices
 \section{Reproducibility}
@@ -1514,6 +1537,7 @@ The figure scripts are in \texttt{Paper/physics\_simulation/scripts}.
 The helper \texttt{plant.py} builds the mission-plant models from \texttt{configs/params}, \texttt{configs/hardware/planned\_8s.yaml} and \texttt{configs/env/mission\_plant.yaml}, merged as mission control merges them.
 \texttt{fig\_vane\_force.py}, \texttt{fig\_spool.py}, \texttt{fig\_battery.py}, \texttt{fig\_drag.py}, \texttt{fig\_gyro.py}, \texttt{fig\_imu.py} and \texttt{fig\_lqr.py} produce one figure each, and \texttt{fig\_convex\_plan.py} produces the plan and line-search figures.
 Each prints the numbers quoted in the text.
+The dispersed-start study of \refsec{sec:lcvx} and the jet-speed sensitivity of \refsec{sec:issues} come from \texttt{fig\_planner\_study.py} and \texttt{sens\_jet\_speed.py} in \texttt{Paper/aiaa\_conference/scripts}, which use the same helper and a fixed random seed.
 The guidance scripts build the flight computer's vehicle model and controller exactly as the mission runner does.
 The printed outputs are saved beside the figures.
 The duct stations come from \texttt{tools/measure\_duct\_stations.py} in \texttt{simulation/isaac}, which needs the USD Python bindings.
