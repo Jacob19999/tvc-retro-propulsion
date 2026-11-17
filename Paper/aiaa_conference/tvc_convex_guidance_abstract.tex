@@ -79,7 +79,7 @@ A scheduled full-state linear-quadratic regulator that feeds back both actuator 
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\textwidth]{convex_plan.pdf}
+\includegraphics[width=0.86\textwidth]{convex_plan.pdf}
 \caption{Energy-optimal landing plan from $(8, 5, 18)$ m at rest: (a) path and glide cone, (b) planned thrust and slack with the annulus bounds, (c) tilt, (d) speed and sink rate against their bounds.}
 \label{fig:plan}
 \end{figure}
@@ -112,6 +112,7 @@ Flown on the same starts, that law still lands every run, but the roll and pitch
 
 \textit{Recorded missions.}
 Eight recorded missions on the momentum-vane plant---direct descents from 3 to \SI{50}{\metre}, an offset start with crosswind, waypoint routes with hovers, the legacy six-cell pack, and a combined wind, sensor-noise and mass-offset case---landed with impacts of 0.136--\SI{0.178}{\metre\per\second} and pad errors of 0.004--\SI{0.146}{\metre} against limits of \SI{0.25}{\metre\per\second} and \SI{0.5}{\metre}.
+A read-only replay of the project's mission-control console, with 13 recorded flights of this guidance in the rigid-body engine, two of them failures, can be viewed at \url{https://triaggent.com/portfolio/mission-control/}.
 
 \begin{table}[t]
 \caption{Planner outcome over 400 dispersed starts}
@@ -133,7 +134,7 @@ Wall time per plan, median / maximum & 63 / \SI{140}{\milli\second} & 64 / \SI{1
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{planner_mc.pdf}
+\includegraphics[width=0.86\textwidth]{planner_mc.pdf}
 \caption{Planner outcome over 400 dispersed starts. (a) Convexification gap of the optimal plans as solved and with the gap guard. (b) Wall time per plan. (c) Outcome against the start's offset and altitude.}
 \label{fig:mc}
 \end{figure}
@@ -144,8 +145,14 @@ Wall time per plan, median / maximum & 63 / \SI{140}{\milli\second} & 64 / \SI{1
 The full paper gives the plant model with its verification (unit tests, offline runs of the production code, and a recorded open-loop audit in which nutation frequency, precession rate and momentum exchange match first-principles predictions to within 5\%), the complete guidance formulation and its derivation from the plant, the flight controller, the planner studies summarized above with a discretization study, and the closed-loop missions.
 It also states the limits of the evidence.
 Several plant parameters are planning estimates; the jet-speed convention, the vane streamtube assumption and the rotor inertia are identified as the parameters to measure first; the planner's point-mass model contains no aerodynamics; the dispersed closed-loop campaign uses a reduced-order replica without contact or sensing; the latest plant corrections and the gap guard have not been re-flown in the rigid-body engine; and no hardware has flown.
-The final manuscript is planned to add a re-flight of the recorded missions on the current plant and a dispersed campaign in the rigid-body engine.
 
+The next phase of the work, for the final paper, has two parts.
+\begin{enumerate}
+\item \textit{Geometric integrators.} A comparison of integrators for the body--rotor gyrostat on energy conservation and stability: the explicit, rotor-only midpoint and coupled midpoint--Cayley schemes examined here against other structure-preserving schemes, across step sizes and spin rates.
+\item \textit{Hardware and transfer.} This is the more important part: building the vehicle and testing how well the model and the guidance transfer to it. The parameters listed above are identified on the bench, the recorded missions are re-flown on the identified plant, and the simulated landings are compared with flight.
+\end{enumerate}
+
+\setlength{\bibsep}{0pt}
 \begin{thebibliography}{99}
 
 \bibitem{acikmese2007}

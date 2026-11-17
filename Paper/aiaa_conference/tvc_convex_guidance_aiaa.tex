@@ -1046,6 +1046,7 @@ These missions predate three changes described in this paper: the duct Coriolis 
 None of the three has been re-flown in the rigid-body engine.
 The first two change the passive damping by an amount three orders of magnitude below the vane authority; the third changes only plans that were gapped.
 A re-flight tool restores each recorded mission from its request, flies it on the current plant and reports every outcome and dynamics setting that differs.
+A read-only replay of the project's mission-control console, with 13 recorded flights of this guidance in the rigid-body engine, two of them failures, can be viewed at \url{https://triaggent.com/portfolio/mission-control/}.
 
 \begin{table}[t]
 \caption{Recorded closed-loop missions, convex guidance on the momentum-vane plant}
@@ -1124,7 +1125,9 @@ The relaxation of the thrust annulus is not lossless once a thrust-rate bound is
 For a hover-dominated vehicle the energy-optimal duration is the shortest feasible one, so the plan's margins are exactly the reserves written into its bounds.
 And the fidelity of the plant decides the control problem: the momentum bound on the vanes and the removal of an artificial damper made the previous attitude law unstable and required a regulator that feeds back the actuator states.
 In closed loop on a reduced-order replica the flight computer landed every one of 400 dispersed starts and tolerated planning latency, rotor-inertia error and a small mass offset, but not vanes 30\% weaker than modeled.
-The next steps are a re-flight of the recorded missions on the current plant and a dispersed campaign in the rigid-body engine, the thrust-stand measurements that test the streamtube assumption and the jet speed, and flight on the hardware.
+Two lines of work follow.
+The first is a comparison of geometric integrators for the body--rotor gyrostat on energy conservation and stability, setting the schemes examined here against other structure-preserving schemes across step sizes and spin rates.
+The second, and the more important, is to build the vehicle and test how well the model and the guidance transfer to it: the thrust-stand and bench measurements of \refsec{sec:limits} identify the plant, the recorded missions are re-flown on the identified plant together with a dispersed campaign in the rigid-body engine, and the simulated landings are compared with flight.
 
 \section*{Appendix: Reproducibility}
 
