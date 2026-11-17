@@ -1,12 +1,13 @@
 \documentclass[10pt,letterpaper]{article}
 \input{aiaa_format}
 
+\hypersetup{pdftitle={Convex Powered-Descent Guidance with Plant-Derived Constraints for a Jet-Vane Thrust-Vectored Electric Ducted Fan Testbed}, pdfauthor={Tang Zijian (Jacob Tang)}}
 \begin{document}
 
 \aiaatitle{Convex Powered-Descent Guidance with Plant-Derived Constraints for a Jet-Vane Thrust-Vectored Electric Ducted Fan Testbed}
 
 {\renewcommand{\thefootnote}{\fnsymbol{footnote}}%
-\aiaaauthor{Tang Zijian (Jacob Tang)\footnote{Department of Computer and Information Sciences. Extended abstract, November 2026; simulation study, no flight hardware results.}}
+\aiaaauthor{Tang Zijian (Jacob Tang)\footnote{Department of Computer and Information Sciences.}}
 \aiaaaffiliation{Minnesota State University, Mankato, Minnesota, 56001}}
 \setcounter{footnote}{0}
 
@@ -19,11 +20,12 @@ Because hover power dominates, the energy-optimal landing duration lies on the b
 In closed loop on a reduced-order replica of the plant, the production flight computer lands all 400 dispersed starts within \SI{0.21}{\metre\per\second} and \SI{0.33}{\metre} of the pad, and eight recorded missions in a rigid-body simulator land within \SI{0.18}{\metre\per\second} and \SI{0.15}{\metre}.
 \end{aiaaabstract}
 
-\section{Motivation}
+\section{Introduction}
 
 Lossless convexification turns powered-descent guidance with a non-convex thrust magnitude bound into a second-order cone program (SOCP) that is solved to global optimality in real time~\cite{acikmese2007,acikmese2013lcvx}, and the method has flown on rocket-powered test vehicles~\cite{scharf2017}.
-Sub-scale electric vehicles are attractive for exercising such guidance cheaply and repeatedly~\cite{linsen2022}.
-Whether the method transfers to one depends on two things it does not supply: a plant model that is right about what limits the vehicle, and planning constraints that represent those limits.
+The relaxation has been extended to minimum-landing-error targets~\cite{blackmore2010mle} and, under additional conditions, to state constraints~\cite{harris2014lcvx}; Malyuta et al.\ survey the field~\cite{malyuta2022convex}.
+Sub-scale electric vehicles are attractive for exercising such guidance cheaply and repeatedly, and Linsen et al.\ fly optimal control on an electric prototype with gimballed propulsion~\cite{linsen2022}.
+Whether the method transfers to such a vehicle depends on two things it does not supply: a plant model that is right about what limits the vehicle, and planning constraints that represent those limits.
 
 The testbed studied here is a \SI{3.1}{\kilogram} vehicle lifted by one \SI{90}{\milli\metre} electric ducted fan and steered by four servo-driven jet vanes in the exhaust.
 Its limits are not a rocket's.
@@ -32,6 +34,16 @@ The rotor stores \SI{0.78}{\newton\metre\second} of angular momentum at hover, a
 The vehicle loses no mass, its thrust ceiling follows the battery's loaded voltage, and the cost that matters is electrical energy.
 These properties make thrust rate and attitude rate the binding actuator limits.
 Neither appears in the classical formulation, and a thrust-rate bound couples successive controls, which lies outside the hypotheses under which the relaxation is known to be lossless~\cite{acikmese2011lcvx,harris2014lcvx}.
+Ducted-fan vehicle models include momentum drag at the intake~\cite{johnson2006ducted}, but to our knowledge none bounds jet-vane authority by the jet's momentum or carries a rotor momentum that exceeds the actuator authority.
+
+The paper makes four contributions.
+\begin{enumerate}
+\item A momentum-consistent plant model of a jet-vane ducted-fan vehicle, with a closed-form vane authority and a gyrostat integration that conserves energy inside a rigid-body engine.
+\item A free-final-time convex guidance law for a constant-mass, battery-powered vehicle whose thrust annulus, thrust rate, attitude slew and sink rate are derived from that plant.
+\item A measurement of how often lossless convexification holds under those constraints, with a convex repair for the cases where it does not, and the observation that the energy-optimal landing of a hover-dominated vehicle is the fastest feasible one.
+\item A dispersed closed-loop assessment of the complete flight computer, with model-mismatch cases that show which plant parameter the closed loop is most sensitive to.
+\end{enumerate}
+The work is a simulation study; no hardware has flown.
 
 \section{Approach}
 
@@ -55,10 +67,10 @@ The thrust is a first-order hold that starts at the rotor's present thrust vecto
 The bounds are derived at every re-plan from the plant and the measured bus voltage:
 \begin{equation}
 \rho_2 = W + \tfrac12\left(T_{\text{av}}(V) - W\right), \qquad
-\Ir\wmax\frac{V}{V_{\text{ref}}}\,\dot d \le 0.4\,K_\psi f_h^2\alpha_{\max}, \qquad
+\Ir\wmax\frac{V}{V_{\text{ref}}}\,\dot d \le 0.4\,\min\!\left(K_\psi f_h^2\alpha_{\max},\, \tau_\psi\right), \qquad
 \omega_t \le 0.4\,\frac{K f_h^2\alpha_{\max}}{\Ir\wmax f_h} ,
 \end{equation}
-that is, half of the excess thrust is reserved for tracking, the duty slew is limited so that the rotor's reaction uses 40\% of the vanes' yaw authority, and the planned tilt rate is limited to 40\% of the precession rate that full vane deflection sustains.
+that is, half of the excess thrust is reserved for tracking, the duty slew $\dot d$ is limited so that the rotor's reaction uses 40\% of the vanes' yaw authority at hover (or of the yaw loop's design torque $\tau_\psi$, if smaller), and the planned tilt rate is limited to 40\% of the precession rate that full vane deflection sustains.
 The free final time is found by a line search over fixed-duration problems solved in parallel with an interior-point conic solver~\cite{goulart2024clarabel}.
 Every plan reports its convexification gap $\epsilon = \max_k(\sigma_k - \|\vect{u}_k\|)/\sigma_k$.
 When the gap exceeds \num{e-3} the gapped nodes receive a convex half-space thrust floor along their solved thrust direction and the problem is solved once more.
@@ -87,7 +99,7 @@ In each, the planned thrust dips below the floor $\rho_1$ for one to six nodes w
 With the thrust floor no plan has a gap above \num{6.3e-4}; the repaired plans cost a median of 2.0\% more energy and plans that were already tight are unchanged.
 
 \textit{Structure of the free-final-time problem.}
-In all 53 starts examined on a fine duration grid, the feasible durations form an interval and the planned energy rises beyond its lower end at \SI{0.58}{\watt\hour\per\second}, the hover power.
+In all 53 starts examined on a \SI{0.5}{\second} duration grid, the feasible durations form an interval and the planned energy rises beyond its lower end at the hover power, \SI{2.09}{\kilo\watt}.
 The energy-optimal landing is therefore the fastest feasible one, the plan rides its bounds, and its margins are exactly the reserves written into them.
 
 \textit{Dispersed closed loop.}
@@ -95,11 +107,11 @@ The unmodified flight computer was flown from the same 400 starts, each with a s
 All 400 runs land inside the success limits of \SI{0.25}{\metre\per\second} and \SI{0.5}{\metre}, with impacts of at most \SI{0.206}{\metre\per\second} and pad errors of at most \SI{0.33}{\metre}, including the 46 that at some point tracked a soft-terminal plan.
 On the first 100 starts the landing statistics are unchanged by a planning latency of \SI{0.4}{\second}, by a rotor inertia 20\% above the model and by a \SI{5}{\milli\metre} mass offset.
 With vanes 30\% weaker than modeled, 93 runs land normally, two land off the pad and five do not complete the terminal descent, which makes vane authority the first parameter to identify.
-With the earlier proportional-derivative attitude law every run still lands, but the roll and pitch rate RMS rises from 2.8 to \SI{12.2}{\degree\per\second}, the bounded limit cycle that the linear analysis predicts.
+The earlier proportional-derivative attitude law is linearly unstable on this plant above 67\% rotor speed, where the regulator's slowest mode decays at 1.6--\SI{2.0}{\per\second}.
+Flown on the same starts, that law still lands every run, but the roll and pitch rate RMS rises from 2.8 to \SI{12.2}{\degree\per\second}: a limit cycle bounded by saturation and the servo deadband.
 
 \textit{Recorded missions.}
 Eight recorded missions on the momentum-vane plant---direct descents from 3 to \SI{50}{\metre}, an offset start with crosswind, waypoint routes with hovers, the legacy six-cell pack, and a combined wind, sensor-noise and mass-offset case---landed with impacts of 0.136--\SI{0.178}{\metre\per\second} and pad errors of 0.004--\SI{0.146}{\metre} against limits of \SI{0.25}{\metre\per\second} and \SI{0.5}{\metre}.
-The earlier proportional-derivative attitude law is linearly unstable on this plant above 67\% rotor speed; the regulator's slowest mode decays at 1.6--\SI{2.0}{\per\second} over the whole range.
 
 \begin{table}[t]
 \caption{Planner outcome over 400 dispersed starts}
@@ -134,7 +146,7 @@ It also states the limits of the evidence.
 Several plant parameters are planning estimates; the jet-speed convention, the vane streamtube assumption and the rotor inertia are identified as the parameters to measure first; the planner's point-mass model contains no aerodynamics; the dispersed closed-loop campaign uses a reduced-order replica without contact or sensing; the latest plant corrections and the gap guard have not been re-flown in the rigid-body engine; and no hardware has flown.
 The final manuscript is planned to add a re-flight of the recorded missions on the current plant and a dispersed campaign in the rigid-body engine.
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{99}
 
 \bibitem{acikmese2007}
 A\c{c}{\i}kme\c{s}e, B., and Ploen, S. R., ``Convex Programming Approach to Powered Descent Guidance for Mars Landing,'' \textit{Journal of Guidance, Control, and Dynamics}, Vol.~30, No.~5, 2007, pp.~1353--1366.
@@ -145,14 +157,23 @@ A\c{c}{\i}kme\c{s}e, B., Carson, J. M., and Blackmore, L., ``Lossless Convexific
 \bibitem{scharf2017}
 Scharf, D. P., A\c{c}{\i}kme\c{s}e, B., Dueri, D., Benito, J., and Casoliva, J., ``Implementation and Experimental Demonstration of Onboard Powered-Descent Guidance,'' \textit{Journal of Guidance, Control, and Dynamics}, Vol.~40, No.~2, 2017, pp.~213--229.
 
+\bibitem{blackmore2010mle}
+Blackmore, L., A\c{c}{\i}kme\c{s}e, B., and Scharf, D. P., ``Minimum-Landing-Error Powered-Descent Guidance for Mars Landing Using Convex Optimization,'' \textit{Journal of Guidance, Control, and Dynamics}, Vol.~33, No.~4, 2010, pp.~1161--1171.
+
+\bibitem{harris2014lcvx}
+Harris, M. W., and A\c{c}{\i}kme\c{s}e, B., ``Lossless Convexification of Non-Convex Optimal Control Problems for State Constrained Linear Systems,'' \textit{Automatica}, Vol.~50, No.~9, 2014, pp.~2304--2311.
+
+\bibitem{malyuta2022convex}
+Malyuta, D., Reynolds, T. P., Szmuk, M., Lew, T., Bonalli, R., Pavone, M., and A\c{c}{\i}kme\c{s}e, B., ``Convex Optimization for Trajectory Generation: A Tutorial on Generating Dynamically Feasible Trajectories Reliably and Efficiently,'' \textit{IEEE Control Systems Magazine}, Vol.~42, No.~5, 2022, pp.~40--113.
+
 \bibitem{linsen2022}
-Linsen, R., Listov, P., de Lajarte, A., Schwan, R., and Jones, C. N., ``Optimal Thrust Vector Control of an Electric Small-Scale Rocket Prototype,'' \textit{Proceedings of the IEEE International Conference on Robotics and Automation (ICRA)}, 2022.
+Linsen, R., Listov, P., de Lajarte, A., Schwan, R., and Jones, C. N., ``Optimal Thrust Vector Control of an Electric Small-Scale Rocket Prototype,'' \textit{Proceedings of the IEEE International Conference on Robotics and Automation (ICRA)}, 2022, pp.~1996--2002.
 
 \bibitem{acikmese2011lcvx}
 A\c{c}{\i}kme\c{s}e, B., and Blackmore, L., ``Lossless Convexification of a Class of Optimal Control Problems with Non-Convex Control Constraints,'' \textit{Automatica}, Vol.~47, No.~2, 2011, pp.~341--347.
 
-\bibitem{harris2014lcvx}
-Harris, M. W., and A\c{c}{\i}kme\c{s}e, B., ``Lossless Convexification of Non-Convex Optimal Control Problems for State Constrained Linear Systems,'' \textit{Automatica}, Vol.~50, No.~9, 2014, pp.~2304--2311.
+\bibitem{johnson2006ducted}
+Johnson, E. N., and Turbe, M. A., ``Modeling, Control, and Flight Testing of a Small Ducted-Fan Aircraft,'' \textit{Journal of Guidance, Control, and Dynamics}, Vol.~29, No.~4, 2006, pp.~769--779.
 
 \bibitem{goulart2024clarabel}
 Goulart, P. J., and Chen, Y., ``Clarabel: An Interior-Point Solver for Conic Programs with Quadratic Objectives,'' arXiv preprint arXiv:2405.12762, 2024.
