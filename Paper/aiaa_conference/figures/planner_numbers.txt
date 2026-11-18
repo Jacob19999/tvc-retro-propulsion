@@ -1,18 +1,22 @@
-guard off: 400 starts, optimal 355, soft-terminal 45, none 0
+guard off: 400 starts, hard-terminal 355, soft-terminal 45, none 0
   gap: median 3.2e-09, max 3.4e-02, >1e-6: 72, >1e-3: 72
-  solve time ms: median 63, p95 92, max 140; SOCPs median 15, max 15; IPM iterations median 17, max 23
-guard on : 400 starts, optimal 355, soft-terminal 45, none 0
+  solve time ms: median 61, p95 86, max 95; conic solves median 15, max 15; IPM iterations median 17, max 23
+guard on : 400 starts, hard-terminal 355, soft-terminal 45, none 0
   gap: median 2.8e-09, max 6.3e-04, >1e-6: 4, >1e-3: 0
-  solve time ms: median 64, p95 93, max 181; SOCPs median 15, max 18; IPM iterations median 17, max 23
+  solve time ms: median 62, p95 90, max 117; conic solves median 15, max 18; IPM iterations median 17, max 23
+  guard on, all returned plans: median 63 ms, p95 94 ms
+  guarded intervals, floor_shortfall: 121/355 exceed; maximum 0.1253 N in case 301 (node gap 3.78e-08)
+  guarded intervals, peak_rate: 131/355 exceed; maximum 16.3497 deg/s in case 229 (node gap 8.06e-09)
   guarded vs raw on the 72 gapped starts: energy +1.97% median, +10.28% max; duration +0.29 s median, +1.43 s max; residual gap max 6.3e-04
   gapped starts: offset/altitude median 0.32 (all starts 0.55), v_z median -0.04 m/s
-N=  8: t_f 8.747 s, 5.0886 Wh, 23 ms, gap 1.7e-09, between nodes: thrust below rho1 -0.000 N, speed +0.029 m/s, sink +0.093 m/s, glide -0.500 m, alternation 5.81 N
-N= 12: t_f 8.544 s, 4.9709 Wh, 33 ms, gap 1.6e-09, between nodes: thrust below rho1 -0.000 N, speed +0.072 m/s, sink +0.069 m/s, glide -0.500 m, alternation 6.29 N
-N= 16: t_f 8.544 s, 4.9681 Wh, 44 ms, gap 2.0e-09, between nodes: thrust below rho1 +0.003 N, speed +0.001 m/s, sink +0.031 m/s, glide -0.500 m, alternation 5.18 N
-N= 24: t_f 8.544 s, 4.9668 Wh, 62 ms, gap 1.7e-09, between nodes: thrust below rho1 +0.001 N, speed +0.002 m/s, sink +0.016 m/s, glide -0.500 m, alternation 2.09 N
-N= 32: t_f 8.544 s, 4.9662 Wh, 86 ms, gap 3.7e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.004 m/s, glide -0.500 m, alternation 2.34 N
-N= 48: t_f 8.544 s, 4.9658 Wh, 170 ms, gap 3.2e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.000 m/s, glide -0.500 m, alternation 1.64 N
-N= 64: t_f 8.544 s, 4.9657 Wh, 218 ms, gap 2.8e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.001 m/s, glide -0.500 m, alternation 1.27 N
-N= 96: t_f 8.544 s, 4.9657 Wh, 337 ms, gap 2.4e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.001 m/s, glide -0.500 m, alternation 0.83 N
-reference start: infeasible below 8.50 s; line search 8.54 s (4.9668 Wh) vs grid minimum 4.9431 Wh; hover power 0.5793 Wh/s
+N=  8: t_f 8.747 s, 5.0886 Wh, 21 ms, gap 1.7e-09, between nodes: thrust below rho1 -0.000 N, speed +0.029 m/s, sink +0.093 m/s, glide -0.500 m, alternation 5.81 N
+N= 12: t_f 8.544 s, 4.9709 Wh, 31 ms, gap 1.6e-09, between nodes: thrust below rho1 -0.000 N, speed +0.072 m/s, sink +0.069 m/s, glide -0.500 m, alternation 6.29 N
+N= 16: t_f 8.544 s, 4.9681 Wh, 40 ms, gap 2.0e-09, between nodes: thrust below rho1 +0.003 N, speed +0.001 m/s, sink +0.031 m/s, glide -0.500 m, alternation 5.18 N
+N= 24: t_f 8.544 s, 4.9668 Wh, 94 ms, gap 1.7e-09, between nodes: thrust below rho1 +0.001 N, speed +0.002 m/s, sink +0.016 m/s, glide -0.500 m, alternation 2.09 N
+N= 32: t_f 8.544 s, 4.9662 Wh, 82 ms, gap 3.7e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.004 m/s, glide -0.500 m, alternation 2.34 N
+N= 48: t_f 8.544 s, 4.9658 Wh, 163 ms, gap 3.2e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.000 m/s, glide -0.500 m, alternation 1.64 N
+N= 64: t_f 8.544 s, 4.9657 Wh, 217 ms, gap 2.8e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.001 m/s, glide -0.500 m, alternation 1.27 N
+N= 96: t_f 8.544 s, 4.9657 Wh, 327 ms, gap 2.4e-09, between nodes: thrust below rho1 +0.000 N, speed +0.000 m/s, sink +0.001 m/s, glide -0.500 m, alternation 0.83 N
+reference start: first solved grid sample 8.50 s; line search 8.54 s (4.9668 Wh) vs grid minimum 4.9431 Wh; hover power 0.5793 Wh/s
+reference fixed-duration check: 8.45 s, 4.9201 Wh, node gap 3.36e-08
 duration structure over 53 starts (0.5 s grid, 2-30 s): feasible set not an interval in 0, cost not non-decreasing beyond the boundary in 0; slope 0.579 Wh/s median (0.577..0.579)

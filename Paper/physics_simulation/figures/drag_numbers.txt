@@ -1,5 +1,5 @@
 hover fraction 0.8409, mdot 0.3157 kg/s, inlet-to-COM -0.007 m
-intake = body crossflow drag at 12.50 m/s; at 1 m/s ratio 12.3
+intake = body crossflow drag at 12.27 m/s; at 1 m/s ratio 12.3
 at 4 m/s: intake 1.263 N, body 0.412 N, old iso 0.196 N, old calm 0.108 N; intake moment 0.009 N m
 rotational damping coefficients (N m s/rad), hover:
   vane flow, roll                          8.937e-04

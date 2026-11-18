@@ -12,36 +12,36 @@
 \setcounter{footnote}{0}
 
 \begin{aiaaabstract}
-A single electric ducted fan steered by four jet vanes is a compact laboratory analogue of a retro-propulsive rocket stage, but its guidance problem differs from the rocket's: the vehicle loses no mass, the rotor stores more angular momentum than the vanes can remove quickly, and the thrust ceiling follows a sagging battery.
-We present a momentum-consistent plant model of such a vehicle and a free-final-time second-order cone guidance law whose thrust, thrust-rate, attitude-slew and sink-rate bounds are derived from that plant.
-Over 400 dispersed starts the planner returns a plan in a median of \SI{64}{\milli\second}.
-The thrust-rate bound opens a convexification gap in 20\% of the feasible starts, which a half-space thrust floor closes at a median energy cost of 2\%.
-Because hover power dominates, the energy-optimal landing duration lies on the boundary of feasibility in every case examined.
-In closed loop on a reduced-order replica of the plant, the production flight computer lands all 400 dispersed starts within \SI{0.21}{\metre\per\second} and \SI{0.33}{\metre} of the pad, and eight recorded missions in a rigid-body simulator land within \SI{0.18}{\metre\per\second} and \SI{0.15}{\metre}.
+A single electric ducted fan steered by four jet vanes is a laboratory analogue of a retro-propulsive stage. Its mass remains constant, the rotor stores angular momentum, and battery voltage limits thrust.
+We combine a momentum-based plant with a guidance law that searches over fixed-duration conic programs.
+Of 400 dispersed starts, 355 returned hard-terminal plans with a median planning time of \SI{62}{\milli\second}.
+The relative node gap between actual and relaxed thrust magnitude exceeded \num{1e-3} in 72 of those plans. A half-space repair reduced the largest relative node gap to \num{6.3e-4} at a median increase of 2\% in planned energy for the 72 cases.
+Planned energy rose approximately at hover power over the sampled solved durations. Exact inter-node checks found small residual thrust-floor violations and thrust-direction rates above the nominal \SI{12}{\degree\per\second} scale.
+In the reduced-order simulation all 400 runs reached touchdown height, with maximum downward speed \SI{0.206}{\metre\per\second} and pad error \SI{0.333}{\metre}. Eight earlier rigid-body missions recorded maxima of \SI{0.178}{\metre\per\second} pre-contact and \SI{0.146}{\metre} from the pad.
 \end{aiaaabstract}
 
 \section{Introduction}
 
-Lossless convexification turns powered-descent guidance with a non-convex thrust magnitude bound into a second-order cone program (SOCP) that is solved to global optimality in real time~\cite{acikmese2007,acikmese2013lcvx}, and the method has flown on rocket-powered test vehicles~\cite{scharf2017}.
+Under the classical losslessness hypotheses, powered-descent guidance with a non-convex thrust magnitude bound admits a second-order cone program (SOCP)~\cite{acikmese2007,acikmese2013lcvx}, and the method has flown on rocket-powered test vehicles~\cite{scharf2017}.
 The relaxation has been extended to minimum-landing-error targets~\cite{blackmore2010mle} and, under additional conditions, to state constraints~\cite{harris2014lcvx}; Malyuta et al.\ survey the field~\cite{malyuta2022convex}.
 Sub-scale electric vehicles are attractive for exercising such guidance cheaply and repeatedly, and Linsen et al.\ fly optimal control on an electric prototype with gimballed propulsion~\cite{linsen2022}.
 Whether the method transfers to such a vehicle depends on two things it does not supply: a plant model that is right about what limits the vehicle, and planning constraints that represent those limits.
 
 The testbed studied here is a \SI{3.1}{\kilogram} vehicle lifted by one \SI{90}{\milli\metre} electric ducted fan and steered by four servo-driven jet vanes in the exhaust.
 Its limits are not a rocket's.
-All attitude authority comes from turning a finite jet, so vane authority is bounded by the jet's momentum and scales with thrust.
-The rotor stores \SI{0.78}{\newton\metre\second} of angular momentum at hover, against about \SI{0.3}{\newton\metre} of vane yaw torque: every throttle change yaws the airframe and every attitude change must precess the rotor.
+The vanes command attitude by redirecting the exhaust. Their torque scales with thrust and depends on the fraction of the jet each vane intercepts.
+The rotor stores \SI{0.78}{\newton\metre\second} at hover, and the vanes provide approximately \SI{0.30}{\newton\metre} of net yaw torque. Changing rotor speed exchanges angular momentum with the body, while tilting the rotor axis requires transverse torque.
 The vehicle loses no mass, its thrust ceiling follows the battery's loaded voltage, and the cost that matters is electrical energy.
 These properties make thrust rate and attitude rate the binding actuator limits.
 Neither appears in the classical formulation, and a thrust-rate bound couples successive controls, which lies outside the hypotheses under which the relaxation is known to be lossless~\cite{acikmese2011lcvx,harris2014lcvx}.
-Ducted-fan vehicle models include momentum drag at the intake~\cite{johnson2006ducted}, but to our knowledge none bounds jet-vane authority by the jet's momentum or carries a rotor momentum that exceeds the actuator authority.
+Ducted-fan models include momentum drag at the intake~\cite{johnson2006ducted}. Here the rotor and finite vane authority also enter the planning limits.
 
 The paper makes four contributions.
 \begin{enumerate}
-\item A momentum-consistent plant model of a jet-vane ducted-fan vehicle, with a closed-form vane authority and a gyrostat integration that conserves energy inside a rigid-body engine.
-\item A free-final-time convex guidance law for a constant-mass, battery-powered vehicle whose thrust annulus, thrust rate, attitude slew and sink rate are derived from that plant.
-\item A measurement of how often lossless convexification holds under those constraints, with a convex repair for the cases where it does not, and the observation that the energy-optimal landing of a hover-dominated vehicle is the fastest feasible one.
-\item A dispersed closed-loop assessment of the complete flight computer, with model-mismatch cases that show which plant parameter the closed loop is most sensitive to.
+\item A momentum-based jet-vane model with a closed-form small-angle authority and an isolated torque-free gyrostat conservation check.
+\item A constant-mass guidance formulation with thrust, slew and sink constraints and explicit authority reserves.
+\item Measurements of relaxation gaps at nodes, thrust magnitude and direction rate between nodes, and energy over a grid of candidate durations.
+\item A dispersed closed-loop assessment with matched perturbations of vane authority, rotor inertia, center of mass and planning delay.
 \end{enumerate}
 The work is a simulation study; no hardware has flown.
 
@@ -50,69 +50,69 @@ The work is a simulation study; no hardware has flown.
 \textit{Plant model.}
 The vehicle is simulated in a GPU rigid-body engine that integrates only the articulated bodies, joint drives and contact; every other effect is a batched force model applied as an external wrench.
 A control-volume jet-vane model shares the jet's mass flow among four streamtubes and conserves angular momentum.
-In its operating regime it reduces to the closed-form side force
+In an unswirled axial jet it reduces to the closed-form side force
 \begin{equation}
 F_{\perp} = \frac{T}{4}\left(\tau_t - \delta_D\right)\sin\alpha\cos\alpha ,
 \end{equation}
-in which the uncertain lift slope nearly drops out ($\tau_t = 0.9995$ at the modeled loading); the independent-airfoil law it replaces overstated authority by a factor of 8.5.
+in which the uncertain lift slope nearly drops out ($\tau_t = 0.9995$ at the modeled loading); the earlier independent-airfoil model gave 8.5 times the modeled small-angle authority.
 A current-limited motor is coupled to a Thevenin battery circuit with an energy cap, and the rotor's spool, swirl and gyroscopic reactions are applied at full strength.
-Intake momentum drag, which exceeds body drag below \SI{12}{\metre\per\second}, is paired with the Coriolis reaction of the duct flow so that the two recover the classical jet-damping moment.
-The body and rotor are integrated together as a gyrostat with an implicit-midpoint velocity step and a Cayley orientation update embedded in the engine's explicit step; explicit gyroscopic integration multiplies rotational energy by 57 in two seconds at the \SI{120}{\hertz} mission step, and the coupled scheme conserves it to round-off.
-With these corrections the plant has 131 times less passive damping than the tuned model it replaced, and the attitude law that flew the earlier plant is unstable on it.
-
-\textit{Guidance.}
-The planner treats the vehicle as a constant-mass point with thrust acceleration $\vect{u}$, so the relaxed problem is an exact SOCP with no change of variables.
-For a fixed duration it minimizes electrical energy under the plant's momentum-theory power law, written as one power cone per node, subject to: the relaxed thrust annulus $\|\vect{u}_k\| \le \sigma_k$, $\rho_1/m \le \sigma_k \le \rho_2/m$; a pointing cone; a thrust-rate bound on the thrust \emph{vector}; an attitude-slew bound on its horizontal part; a glide-slope cone; a speed bound; and a sink-rate envelope $-v_z \le \sqrt{v_g^2 + 2a(z - z_g)}$, a rotated second-order cone that keeps the vehicle able to brake to the gate speed with a third of its planned braking capacity.
-The thrust is a first-order hold that starts at the rotor's present thrust vector, so the planned thrust is continuous and the rate bounds apply to what the vehicle must follow.
-The bounds are derived at every re-plan from the plant and the measured bus voltage:
-\begin{equation}
-\rho_2 = W + \tfrac12\left(T_{\text{av}}(V) - W\right), \qquad
-\Ir\wmax\frac{V}{V_{\text{ref}}}\,\dot d \le 0.4\,\min\!\left(K_\psi f_h^2\alpha_{\max},\, \tau_\psi\right), \qquad
-\omega_t \le 0.4\,\frac{K f_h^2\alpha_{\max}}{\Ir\wmax f_h} ,
-\end{equation}
-that is, half of the excess thrust is reserved for tracking, the duty slew $\dot d$ is limited so that the rotor's reaction uses 40\% of the vanes' yaw authority at hover (or of the yaw loop's design torque $\tau_\psi$, if smaller), and the planned tilt rate is limited to 40\% of the precession rate that full vane deflection sustains.
-The free final time is found by a line search over fixed-duration problems solved in parallel with an interior-point conic solver~\cite{goulart2024clarabel}.
-Every plan reports its convexification gap $\epsilon = \max_k(\sigma_k - \|\vect{u}_k\|)/\sigma_k$.
-When the gap exceeds \num{e-3} the gapped nodes receive a convex half-space thrust floor along their solved thrust direction and the problem is solved once more.
-\reffig{fig:plan} shows a representative plan, which descends on its speed bound and brakes along the sink-rate envelope.
-A scheduled full-state linear-quadratic regulator that feeds back both actuator states realizes the plan on the vanes.
+At hover rotor speed, intake momentum drag exceeds modeled crossflow drag below \SI{12.3}{\metre\per\second}. Together with the duct-flow Coriolis reaction, it recovers the classical jet-damping moment.
+In the isolated torque-free test with constant hover rotor speed and zero axial body spin, explicit Euler integration at \SI{120}{\hertz} amplifies transverse body kinetic energy 57-fold in two seconds. The coupled implicit-midpoint and Cayley updates conserve body kinetic energy and world angular momentum to round-off.
+At a transverse body rate of \SI{1}{\radian\per\second}, the effective roll and pitch damping coefficient is $1/131$ of the earlier tuned value. The earlier attitude law has an unstable mode on the corrected plant at hover.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.86\textwidth]{convex_plan.pdf}
-\caption{Energy-optimal landing plan from $(8, 5, 18)$ m at rest: (a) path and glide cone, (b) planned thrust and slack with the annulus bounds, (c) tilt, (d) speed and sink rate against their bounds.}
+\includegraphics[width=\textwidth]{convex_plan.pdf}
+\caption{Reference plan from $(8, 5, 18)$ m at rest. Panels show the path and glide cone, thrust and slack at the nodes, planned tilt, and the speed and sink-rate bounds.}
 \label{fig:plan}
 \end{figure}
+
+\textit{Guidance.}
+The planner models a constant-mass point with thrust acceleration $\vect{u}$. Each fixed-duration relaxation uses second-order cones for trajectory constraints and native power cones for the quasi-steady energy objective.
+Constraints include a relaxed thrust annulus, pointing cone, rates on the full and horizontal thrust vectors, glide slope, speed and sink rate. The sink envelope uses 35\% of the upright planned braking acceleration and includes a decaying allowance for fast entries.
+The thrust is linear between nodes, beginning from a projected measured thrust or the preceding plan's reference thrust.
+The bounds are derived at every re-plan from the plant and the measured bus voltage $V$ (with nominal reference $V_{\text{ref}} = \SI{29.6}{\volt}$ and vane effort limit $\bar\alpha = \SI{0.245}{\radian}$, reserving the $\SI{0.017}{\radian}$ servo deadband out of the $\SI{0.262}{\radian}$ travel):
+\begin{equation}
+\rho_2 = \max\!\left(1.01W,\,W+\tfrac12(T_{\text{av}}(V)-W)\right), \qquad
+\Ir\wmax\frac{V}{V_{\text{ref}}}\,\dot d \le 0.4\,\min\!\left(K_\psi f_h^2\bar\alpha,\, \tau_\psi\right), \qquad
+\omega_t \le 0.4\,\frac{K f_h^2\bar\alpha}{\Ir\wmax f_h} ,
+\end{equation}
+The numerical minimum on the ceiling matters below the sampled voltage range. At \SI{24.4}{\volt} the model can supply only \SI{29.26}{\newton} against \SI{30.45}{\newton} of weight, while the planner permits \SI{30.75}{\newton}. The 0.4 factors allocate hover torque to commanded slew.
+The planner selects a duration by a line search over fixed-duration problems solved in parallel with an interior-point conic solver~\cite{goulart2024clarabel}.
+Every plan reports its convexification gap $\epsilon = \max_k\big[(\sigma_k - \|\vect{u}_k\|)/\sigma_k\big]$.
+When the gap exceeds \num{e-3} the gapped nodes receive a convex half-space thrust floor along their solved thrust direction and the problem is solved once more.
+\reffig{fig:plan} shows a representative plan, which descends on its speed bound and brakes along the sink-rate envelope.
+A scheduled full-state linear-quadratic regulator that feeds back both actuator states realizes the plan on the vanes.
 
 \section{Results to Date}
 
 All planner and plant-model results are computed by scripts that import the production code. Closed-loop results are of two kinds: a dispersed campaign that flies the production flight computer on a reduced-order replica of the plant, and recorded runs in the rigid-body engine.
 
 \textit{Planner over dispersed starts.}
-Four hundred starts were drawn with offsets up to \SI{25}{\metre}, altitudes of 5--\SI{40}{\metre}, speeds up to \SI{3}{\metre\per\second} and bus voltages of 26--\SI{33}{\volt} (\reftab{tab:mc}, \reffig{fig:mc}).
-A plan was returned for every start: 355 optimal plans, and 45 soft-terminal fallbacks for low, shallow starts that are infeasible for the state constraints, all of which still reached the gate.
-Planning took a median of \SI{64}{\milli\second} and at most \SI{181}{\milli\second} on a laptop processor, in a median of 15 SOCPs of 24 intervals.
+Four hundred starts were drawn with offsets up to \SI{25}{\metre}, altitudes of 5--\SI{40}{\metre}, horizontal speeds up to \SI{3}{\metre\per\second}, vertical speeds from \SI{-3}{} to \SI{+1}{\metre\per\second}, and bus voltages of 26--\SI{33}{\volt} (\reftab{tab:mc}, \reffig{fig:mc}).
+The search returned 355 hard-terminal plans and 45 soft-terminal fallbacks. A finer duration sweep found a hard-terminal solution for fallback case 336 at \SI{17.75}{\second}.
+Among the 355 hard-terminal results, planning took a median of \SI{62}{\milli\second} and at most \SI{117}{\milli\second} on the laptop processor.
 
 \textit{Losslessness.}
-As solved, 72 of the 355 optimal plans (20\%) have a convexification gap above \num{e-3}, up to 3.4\%.
-In each, the planned thrust dips below the floor $\rho_1$ for one to six nodes while thrust ramps down at the rate bound and the slack stays on the floor.
-With the thrust floor no plan has a gap above \num{6.3e-4}; the repaired plans cost a median of 2.0\% more energy and plans that were already tight are unchanged.
+Before repair, 72 of the 355 hard-terminal plans had node gaps above \num{e-3}, up to 3.4\%.
+Re-solving those cases at the same durations with only the full-vector rate bound removed left 47 above tolerance.
+Repair reduced the maximum node gap to \num{6.3e-4}. Between nodes, 121 of the 355 plans dipped below the thrust floor by more than \SI{e-5}{\newton} (worst \SI{0.125}{\newton}), and 131 exceeded the horizontal-rate proxy's nominal \SI{12.01}{\degree\per\second} when measured on the unit thrust direction (peak \SI{16.35}{\degree\per\second}).
 
 \textit{Structure of the free-final-time problem.}
-In all 53 starts examined on a \SI{0.5}{\second} duration grid, the feasible durations form an interval and the planned energy rises beyond its lower end at the hover power, \SI{2.09}{\kilo\watt}.
-The energy-optimal landing is therefore the fastest feasible one, the plan rides its bounds, and its margins are exactly the reserves written into them.
+With the guard disabled, 53 of 60 starts had solutions on the \SI{0.5}{\second} grid. Across contiguous solved samples, cost was non-decreasing and the fitted slopes were 0.577--\SI{0.579}{\watt\hour\per\second}, close to hover power.
+For the reference start the normal search returned \SI{8.544}{\second} and \SI{4.9668}{\watt\hour}. A finer fixed-duration check yielded \SI{8.45}{\second} and \SI{4.9201}{\watt\hour}. The sampled durations establish neither the exact feasibility boundary nor a global optimum.
 
 \textit{Dispersed closed loop.}
 The unmodified flight computer was flown from the same 400 starts, each with a steady wind of up to \SI{4}{\metre\per\second}, on a replica with the rotor's gyroscopic and spool reactions, vane torques and their side force, the servo deadband and joint lag, the current-limited motor, and intake and body drag; the replica has no contact model and the controller reads the true state.
-All 400 runs land inside the success limits of \SI{0.25}{\metre\per\second} and \SI{0.5}{\metre}, with impacts of at most \SI{0.206}{\metre\per\second} and pad errors of at most \SI{0.33}{\metre}, including the 46 that at some point tracked a soft-terminal plan.
-On the first 100 starts the landing statistics are unchanged by a planning latency of \SI{0.4}{\second}, by a rotor inertia 20\% above the model and by a \SI{5}{\milli\metre} mass offset.
-With vanes 30\% weaker than modeled, 93 runs land normally, two land off the pad and five do not complete the terminal descent, which makes vane authority the first parameter to identify.
-The earlier proportional-derivative attitude law is linearly unstable on this plant above 67\% rotor speed, where the regulator's slowest mode decays at 1.6--\SI{2.0}{\per\second}.
-Flown on the same starts, that law still lands every run, but the roll and pitch rate RMS rises from 2.8 to \SI{12.2}{\degree\per\second}: a limit cycle bounded by saturation and the servo deadband.
+All 400 runs passed the downward-speed and pad-error criteria at the first body-origin touchdown-height crossing, including the 46 that tracked a soft-terminal plan. The maximum total body speed there was \SI{0.228}{\metre\per\second}.
+All 100 matched cases also passed with a fixed \SI{0.4}{\second} re-plan delay, a 20\% increase in rotor inertia, or a \SI{5}{\milli\metre} center-of-mass offset, tested separately.
+With vanes 30\% weaker than modeled, 93 of 100 runs passed, two crossed off the pad and five timed out. This perturbation caused the largest loss of completions among those tested.
+The earlier proportional-derivative attitude law is linearly unstable on this plant above 67\% rotor speed, whereas the regulator's slowest mode decays at 1.9--\SI{2.0}{\per\second} there (1.6--\SI{2.0}{\per\second} across 30--100\% rotor speed).
+On the same starts, median roll and pitch rate RMS increased from 2.8 to \SI{12.2}{\degree\per\second} with the earlier law, consistent with the bounded oscillations observed in simulation.
 
 \textit{Recorded missions.}
 Eight recorded missions on the momentum-vane plant---direct descents from 3 to \SI{50}{\metre}, an offset start with crosswind, waypoint routes with hovers, the legacy six-cell pack, and a combined wind, sensor-noise and mass-offset case---landed with impacts of 0.136--\SI{0.178}{\metre\per\second} and pad errors of 0.004--\SI{0.146}{\metre} against limits of \SI{0.25}{\metre\per\second} and \SI{0.5}{\metre}.
-A read-only replay of the project's mission-control console, with 13 recorded flights of this guidance in the rigid-body engine, two of them failures, can be viewed at \url{https://triaggent.com/portfolio/mission-control/}.
+These eight runs preceded the sink-rate envelope, emergency braking, corrected intake station, duct Coriolis term and node-gap guard. The project hosts a read-only replay at \url{https://triaggent.com/portfolio/mission-control/}.
 
 \begin{table}[t]
 \caption{Planner outcome over 400 dispersed starts}
@@ -123,33 +123,32 @@ A read-only replay of the project's mission-control console, with 13 recorded fl
 \toprule
  & Relaxation as solved & With gap guard \\
 \midrule
-Optimal plans / soft-terminal / no plan & 355 / 45 / 0 & 355 / 45 / 0 \\
-Optimal plans with gap above \num{e-3} & 72 (20\%) & 0 \\
+Hard-terminal / soft-terminal / no plan & 355 / 45 / 0 & 355 / 45 / 0 \\
+Hard-terminal plans with gap above \num{e-3} & 72 (20\%) & 0 \\
 Largest gap & \num{3.4e-2} & \num{6.3e-4} \\
 Energy change on the gapped plans, median / maximum & --- & $+2.0\%$ / $+10.3\%$ \\
-Wall time per plan, median / maximum & 63 / \SI{140}{\milli\second} & 64 / \SI{181}{\milli\second} \\
+Hard-terminal wall time, median / maximum & 61 / \SI{95}{\milli\second} & 62 / \SI{117}{\milli\second} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.86\textwidth]{planner_mc.pdf}
-\caption{Planner outcome over 400 dispersed starts. (a) Convexification gap of the optimal plans as solved and with the gap guard. (b) Wall time per plan. (c) Outcome against the start's offset and altitude.}
+\includegraphics[width=0.82\textwidth]{planner_mc.pdf}
+\caption{Planner outcomes for 400 dispersed starts. The gap distributions and timing histogram in (a) and (b) cover the 355 hard-terminal plans. Panel (c) includes all starts.}
 \label{fig:mc}
 \end{figure}
 
 
 \section{Expected Final Results}
 
-The full paper gives the plant model with its verification (unit tests, offline runs of the production code, and a recorded open-loop audit in which nutation frequency, precession rate and momentum exchange match first-principles predictions to within 5\%), the complete guidance formulation and its derivation from the plant, the flight controller, the planner studies summarized above with a discretization study, and the closed-loop missions.
-It also states the limits of the evidence.
-Several plant parameters are planning estimates; the jet-speed convention, the vane streamtube assumption and the rotor inertia are identified as the parameters to measure first; the planner's point-mass model contains no aerodynamics; the dispersed closed-loop campaign uses a reduced-order replica without contact or sensing; the latest plant corrections and the gap guard have not been re-flown in the rigid-body engine; and no hardware has flown.
+The full paper gives the plant model with its verification (unit tests, offline runs of the production code, and a recorded open-loop audit in which nutation frequency, precession rate and momentum exchange match first-principles predictions to within about 5\%), the complete guidance formulation and its derivation from the plant, the flight controller, the planner studies summarized above with a discretization study, and the closed-loop missions.
+It also states the limits of the evidence: several parameters are planning estimates (with jet-speed convention, streamtube share and rotor inertia identified to measure first), the planner omits aerodynamics, the dispersed closed-loop replica omits contact and sensing, the latest plant terms and gap guard await rigid-body re-flight, and no hardware has flown.
 
 The next phase of the work, for the final manuscript, has two parts.
 \begin{enumerate}
-\item \textit{Geometric integrators.} A comparison of integrators for the body--rotor gyrostat on energy conservation and stability: the explicit, rotor-only midpoint and coupled midpoint--Cayley schemes examined here against other structure-preserving schemes, across step sizes and spin rates.
-\item \textit{Hardware and transfer.} This is the more important part: building the vehicle and testing how well the model and the guidance transfer to it. The parameters listed above are identified on the bench, the recorded missions are re-flown on the identified plant, and the simulated landings are compared with flight.
+\item \textit{Geometric integrators and full-simulator verification.} Comparing the explicit, rotor-only midpoint and coupled midpoint--Cayley schemes against other structure-preserving gyrostat integrators across step sizes and spin rates, and re-flying the recorded and dispersed campaigns in the full simulator with all latest terms and the gap guard.
+\item \textit{Bench identification and hardware transfer.} Static thrust-stand measurement of $T(\wrot, V)$, exhaust speed, independently measured rotor inertia $\Ir$, coast-down drag, loaded servo response, and vane side force and drag, followed by closed-loop evaluation on the identified plant and, as bring-up permits, tethered and free-flight tests.
 \end{enumerate}
 
 \setlength{\bibsep}{0pt}
@@ -183,7 +182,7 @@ A\c{c}{\i}kme\c{s}e, B., and Blackmore, L., ``Lossless Convexification of a Clas
 Johnson, E. N., and Turbe, M. A., ``Modeling, Control, and Flight Testing of a Small Ducted-Fan Aircraft,'' \textit{Journal of Guidance, Control, and Dynamics}, Vol.~29, No.~4, 2006, pp.~769--779.
 
 \bibitem{goulart2024clarabel}
-Goulart, P. J., and Chen, Y., ``Clarabel: An Interior-Point Solver for Conic Programs with Quadratic Objectives,'' arXiv preprint arXiv:2405.12762, 2024.
+Goulart, P. J., and Chen, Y., ``Clarabel: An Interior-Point Solver for Conic Programs with Quadratic Objectives,'' \textit{Mathematical Programming Computation}, Vol.~18, 2026, pp.~1279--1361.
 
 \end{thebibliography}
 

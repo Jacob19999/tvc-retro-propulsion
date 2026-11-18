@@ -1,7 +1,7 @@
-100 closed-loop landings in 1.2 min wall: landed 93, off_nominal 2, crash 0, lost_attitude 0, timeout 5
-  impact speed, all touchdowns: median 0.151, p95 0.182, max 0.189 m/s
-  pad error, all touchdowns: median 0.123, p95 0.249, max 1.696 m
-  tilt at touchdown: median 1.38, p95 3.24, max 9.56 deg
+100 closed-loop runs in 1.2 min wall: landed 93, off_nominal 2, crash 0, lost_attitude 0, timeout 5
+  downward speed, all height crossings: median 0.151, p95 0.182, max 0.189 m/s
+  pad error, all height crossings: median 0.123, p95 0.249, max 1.696 m
+  tilt at height crossing: median 1.38, p95 3.24, max 9.56 deg
   peak attitude error: median 4.38, p95 12.55, max 17.02 deg
   peak tilt in flight: median 10.04, p95 15.77, max 20.15 deg
   peak tracking error in powered descent: median 0.478, p95 0.749, max 1.051 m
@@ -9,16 +9,16 @@
   flight time: median 13.9, p95 29.7, max 79.9 s
   electrical energy: median 7.83, p95 17.58, max 47.87 Wh
   largest re-plan solve time per run: median 84, p95 161, max 173 ms
-  re-plans per run: median 20; runs that ever tracked a soft-terminal plan: 17; largest gap of a tracked optimal plan 7.8e-04
-  not nominal #13: timeout, impact -0.01 m/s, pad 1.05 m, start offset 13.9 m alt 19.5 m vz -0.8 m/s, bus 28.8 V, wind 1.9 m/s, soft-plan share 0.02, t 120.0 s, last phase TERMINAL_DESCENT at 0.79 m
-  not nominal #14: off_nominal, impact 0.15 m/s, pad 1.70 m, start offset 21.2 m alt 11.6 m vz -1.5 m/s, bus 31.6 V, wind 2.5 m/s, soft-plan share 0.07, t 79.9 s, last phase TERMINAL_DESCENT at 0.31 m
-  not nominal #30: timeout, impact 0.01 m/s, pad 0.00 m, start offset 22.7 m alt 13.9 m vz -2.8 m/s, bus 32.3 V, wind 2.4 m/s, soft-plan share 0.03, t 120.0 s, last phase TERMINAL_DESCENT at 0.34 m
-  not nominal #41: timeout, impact -0.00 m/s, pad 0.00 m, start offset 10.7 m alt 14.2 m vz -1.1 m/s, bus 31.6 V, wind 2.2 m/s, soft-plan share 0.07, t 120.0 s, last phase TERMINAL_DESCENT at 1.09 m
-  not nominal #64: timeout, impact -0.01 m/s, pad 11.04 m, start offset 10.9 m alt 5.8 m vz -1.4 m/s, bus 31.4 V, wind 0.7 m/s, soft-plan share 0.02, t 120.0 s, last phase TERMINAL_DESCENT at 0.78 m
-  not nominal #69: timeout, impact -0.04 m/s, pad 0.00 m, start offset 19.7 m alt 10.1 m vz -1.7 m/s, bus 30.6 V, wind 2.1 m/s, soft-plan share 0.00, t 120.0 s, last phase TERMINAL_DESCENT at 4.05 m
-  not nominal #85: off_nominal, impact 0.19 m/s, pad 1.42 m, start offset 19.2 m alt 26.6 m vz -1.5 m/s, bus 31.2 V, wind 1.9 m/s, soft-plan share 0.00, t 16.1 s, last phase TERMINAL_DESCENT at 0.31 m
-  bus 26-28 V: 27/27 landed, impact median 0.155 m/s
-  bus 28-30 V: 29/30 landed, impact median 0.148 m/s
-  bus 30-33 V: 37/43 landed, impact median 0.153 m/s
-  wind 0-2 m/s: 47/50 landed, pad error median 0.122 m, p95 0.237 m
-  wind 2-4 m/s: 46/50 landed, pad error median 0.124 m, p95 0.254 m
+  re-plans per run: median 20; runs that ever tracked a soft-terminal plan: 17; largest gap of a tracked hard-terminal plan 7.8e-04
+  not nominal #13: timeout, last downward speed -0.01 m/s, pad 1.05 m, start offset 13.9 m alt 19.5 m vz -0.8 m/s, bus 28.8 V, wind 1.9 m/s, soft-plan share 0.02, t 120.0 s, last phase TERMINAL_DESCENT at 0.79 m
+  not nominal #14: off_nominal, last downward speed 0.15 m/s, pad 1.70 m, start offset 21.2 m alt 11.6 m vz -1.5 m/s, bus 31.6 V, wind 2.5 m/s, soft-plan share 0.07, t 79.9 s, last phase TERMINAL_DESCENT at 0.31 m
+  not nominal #30: timeout, last downward speed 0.01 m/s, pad 0.00 m, start offset 22.7 m alt 13.9 m vz -2.8 m/s, bus 32.3 V, wind 2.4 m/s, soft-plan share 0.03, t 120.0 s, last phase TERMINAL_DESCENT at 0.34 m
+  not nominal #41: timeout, last downward speed -0.00 m/s, pad 0.00 m, start offset 10.7 m alt 14.2 m vz -1.1 m/s, bus 31.6 V, wind 2.2 m/s, soft-plan share 0.07, t 120.0 s, last phase TERMINAL_DESCENT at 1.09 m
+  not nominal #64: timeout, last downward speed -0.01 m/s, pad 11.04 m, start offset 10.9 m alt 5.8 m vz -1.4 m/s, bus 31.4 V, wind 0.7 m/s, soft-plan share 0.02, t 120.0 s, last phase TERMINAL_DESCENT at 0.78 m
+  not nominal #69: timeout, last downward speed -0.04 m/s, pad 0.00 m, start offset 19.7 m alt 10.1 m vz -1.7 m/s, bus 30.6 V, wind 2.1 m/s, soft-plan share 0.00, t 120.0 s, last phase TERMINAL_DESCENT at 4.05 m
+  not nominal #85: off_nominal, last downward speed 0.19 m/s, pad 1.42 m, start offset 19.2 m alt 26.6 m vz -1.5 m/s, bus 31.2 V, wind 1.9 m/s, soft-plan share 0.00, t 16.1 s, last phase TERMINAL_DESCENT at 0.31 m
+  bus 26-28 V: 27/27 passed, downward speed median 0.155 m/s
+  bus 28-30 V: 29/30 passed, downward speed median 0.148 m/s
+  bus 30-33 V: 37/43 passed, downward speed median 0.153 m/s
+  wind 0-2 m/s: 47/50 passed, pad error median 0.122 m, p95 0.237 m
+  wind 2-4 m/s: 46/50 passed, pad error median 0.124 m, p95 0.254 m

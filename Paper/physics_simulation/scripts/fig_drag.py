@@ -25,7 +25,7 @@ for v in speeds.tolist():
     iso.append(0.5 * 1.225 * legacy_iso["cd"] * legacy_iso["area"] * v * v)
     calm.append(0.5 * 1.225 * legacy_calm["cd"] * legacy_calm["area"] * v * v)
 total = [a + b for a, b in zip(inlet, body)]
-crossing = next(s for s, a, b in zip(speeds.tolist(), inlet, body) if s > 0 and b >= a)
+crossing = 2.0 * float(mdot) / (wind.air_density * wind.cd_lateral * wind.lateral_area)
 
 fig, ax = plt.subplots(figsize=(3.45, 2.4))
 ax.plot(speeds, total, color=C["black"], label="Current plant: total")
