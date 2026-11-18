@@ -1,0 +1,2 @@
+hover fraction 0.8409; held for 243 s; final SOC 0.012, bus 32.04 -> 24.39 V, current 65.1 -> 80.0 A, energy 140.4 Wh, pack temperature 61.8 C, last duty 1.000
+initial electrical power 2085 W

@@ -259,3 +259,34 @@ def inlet_momentum_drag(mass_flow: Tensor, inlet_air_velocity: Tensor) -> Tensor
         (num_envs, 3) force on the vehicle, in the frame of the velocity.
     """
     return -mass_flow.unsqueeze(-1) * inlet_air_velocity
+
+
+def duct_coriolis_force(mass_flow: Tensor, body_rate: Tensor, inlet: Tensor, exit: Tensor) -> Tensor:
+    """Coriolis reaction of the air flowing through the rotating duct, applied at its midpoint.
+
+    Air crosses the duct from `inlet` to `exit` at a relative velocity
+    v_d a (a the duct axis). A rotating body must give it the Coriolis
+    acceleration 2 w x v_d a, so the air pushes back with
+    -int 2 w x a v_d (mdot / v_d) ds = -2 mdot w x (exit - inlet); its moment
+    about any point equals this force applied at the duct midpoint.
+
+    This is the other half of the classical jet-damping bookkeeping
+    (Thomson, Introduction to Space Dynamics). inlet_momentum_drag alone
+    damps transverse rotation by mdot l_in^2 about the COM; with this
+    reaction the duct's total is mdot l_exit^2, a function of the nozzle
+    station only. For the planned 8S hover (inlet 0.10 m above, nozzle
+    0.06 m below the COM) the intake term alone was about twice the
+    consistent value (Paper/physics_simulation, Sec. VI-C). Together the two
+    act like -mdot v_exit: their power is -mdot |v + w x exit|^2, never
+    positive.
+
+    Args:
+        mass_flow: (num_envs,) duct mass flow (kg/s).
+        body_rate: (num_envs, 3) body angular velocity, same frame as the points.
+        inlet, exit: (3,) or (num_envs, 3) duct inlet and nozzle stations.
+
+    Returns:
+        (num_envs, 3) force on the vehicle, to be applied at (inlet + exit) / 2.
+    """
+    span = (exit - inlet).expand_as(body_rate)
+    return -2.0 * mass_flow.unsqueeze(-1) * torch.linalg.cross(body_rate, span)

@@ -105,6 +105,9 @@ STOP_KINDS = (HOVER, TAKEOFF, DESCENT)
 _OK = ('Solved', 'AlmostSolved')
 _GOLDEN = (math.sqrt(5.0) - 1.0) / 2.0
 CORRIDOR_WINDOW = 0.1   # refined corridor chords span +-10% of the leg around each node
+# Relative convexification gap (sigma - |u|) / sigma above which a node gets a thrust floor and the
+# problem is re-solved once (see _solve). Lossless plans solve to ~1e-9 and are never re-solved.
+LCVX_GAP_TOLERANCE = 1e-3
 
 
 def _clarabel():
@@ -647,7 +650,13 @@ class ConvexGuidance:
             if key not in cache:
                 cache[key] = self._solve(r0, v0, thrust_now, gate, segments + [land(t_land)], stats)
             plan = cache[key]
-            return math.inf if plan is None else plan.cost
+            # A plan whose relaxation is not tight (gap above tolerance, even after
+            # the thrust floor in _solve) counts as infeasible here: such gaps sit at
+            # the short, minimum-energy edge of feasibility, so the search moves to a
+            # slightly longer duration whose plan respects rho1. Last resort below.
+            if plan is None or plan.convexification_gap > LCVX_GAP_TOLERANCE:
+                return math.inf
+            return plan.cost
 
         def sweep(candidates):
             # The sweep's durations are independent problems: solve them
@@ -672,7 +681,8 @@ class ConvexGuidance:
             candidates = list(np.geomspace(t_lo, t_hi, 8))
             values = sweep(candidates)
         if not any(math.isfinite(v) for v in values):
-            return None
+            gapped = [plan for plan in cache.values() if plan is not None]
+            return min(gapped, key=lambda plan: plan.cost) if gapped else None
         j = int(np.argmin(values))
         # Golden-section refinement in the bracket around the best sample.
         a = candidates[j - 1] if j > 0 else candidates[j] * 0.8
@@ -689,15 +699,28 @@ class ConvexGuidance:
                 a, c = c, d
                 d = a + _GOLDEN * (b - a)
         feasible = [plan for plan in cache.values() if plan is not None]
-        return min(feasible, key=lambda plan: plan.cost)
+        lossless = [plan for plan in feasible if plan.convexification_gap <= LCVX_GAP_TOLERANCE]
+        return min(lossless or feasible, key=lambda plan: plan.cost)
 
     # ---- SOCP ----
 
-    def _solve(self, r0, v0, thrust_now, gate, segments, stats, soft_weight=None, velocity_weight=None):
+    def _solve(self, r0, v0, thrust_now, gate, segments, stats, soft_weight=None, velocity_weight=None,
+               floor_directions=None):
         """One fixed-duration SOCP (Problem 4 with the segment constraints).
 
         With `soft_weight`, the terminal position/velocity become penalized
         slacks and the state constraints are dropped (see _soft_terminal).
+
+        Lossless convexification is not guaranteed here: the thrust-rate bound
+        couples successive controls, i.e. it makes thrust a state, which is
+        outside Lemma 1. Planned with the production limits, a near-vertical
+        entry ramped |u| below sigma = rho1/m on two nodes (23.4 vs 24.1 N,
+        a 3.2% gap; Paper/physics_simulation Sec. X-C). When an optimal plan
+        has a gap above LCVX_GAP_TOLERANCE, the affected nodes get the convex
+        half-space floor u_k . d_k >= rho1_k / m along their solved thrust
+        direction d_k (`floor_directions`), which implies |u_k| >= rho1_k / m,
+        and the problem is solved once more. If that is infeasible the original
+        plan is kept. Plans that were already lossless are unchanged.
         """
         clarabel = _clarabel()
         lim = self.limits
@@ -794,6 +817,10 @@ class ConvexGuidance:
         for k in range(n_int + 1):
             # A spooling rotor cannot reach rho1 at once: ramp the lower bound.
             cones.le([(U(k, 3), -1.0)], -min(sig_min, sig_now + rate * times[k]))
+            if floor_directions is not None and k in floor_directions:
+                # Convex floor on the thrust itself, not only on the slack (see the docstring).
+                d = floor_directions[k]
+                cones.le([(U(k, i), -float(d[i])) for i in range(3)], -min(sig_min, sig_now + rate * times[k]))
             # A rotor above the ceiling (a braking plan, or tracking margin)
             # comes back down at the thrust rate, not in one step.
             ceiling = sig_full if times[k] <= braking_until else sig_max
@@ -1084,6 +1111,14 @@ class ConvexGuidance:
                 terms['smoothness'] = unit * quadratic
         plan.cost = float(sum(terms.values()))
         plan.cost_terms = {key: round(value, 6) for key, value in terms.items() if math.isfinite(value)}
+        if soft_weight is None and floor_directions is None and plan.convexification_gap > LCVX_GAP_TOLERANCE:
+            norm = np.linalg.norm(u, axis=1)
+            gaps = (sigma - norm) / np.maximum(sigma, 1e-9)
+            directions = {int(k): (u[k] / norm[k] if norm[k] > 1e-9 else np.array([0.0, 0.0, 1.0]))
+                          for k in np.flatnonzero(gaps > LCVX_GAP_TOLERANCE)}
+            floored = self._solve(r0, v0, thrust_now, gate, segments, stats, floor_directions=directions)
+            if floored is not None:
+                return floored
         return plan
 
     def _arrival(self, cones, X, node, arrival_velocity):

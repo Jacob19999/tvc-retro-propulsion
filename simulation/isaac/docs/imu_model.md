@@ -207,7 +207,11 @@ Points worth knowing:
 - Temperature: every profile draws a power-up offset within ±5 K of its calibration point and a +5 K
   self-heating rise (300 s). With the BMI085's 0.015 dps/K that is up to 0.15 dps of warm-up drift on the BNO085;
   for the other two the coefficients are estimates.
-- The physics step is 480 Hz, so the VN-110E's 800 Hz IMU data is not reproduced; its attitude is modelled at 400 Hz.
+- Missions run physics at 120 Hz (`configs/env/single_env_debug.yaml`). There no profile reports faster than 120 Hz and latency
+  rounds to whole 8.3 ms substeps: the WTGAHRS1's 5 ms runs as 8.3 ms and the VN-110E's 2 ms as 0. Each model's `timing`
+  (recorded in mission metadata as `sensor_timing`) states what it delivers, and a `RuntimeWarning` flags material rounding
+  (`tvc_env/dynamics/sensor_timing.py`). Draw timing-sensitive conclusions from a finer physics step; even at 480 Hz the
+  VN-110E's 800 Hz IMU data is not reproduced and its attitude is modelled at 400 Hz.
 - Mahony gains are stand-ins for three proprietary filters. Fit them to a scripted manoeuvre before
   reading anything into attitude error.
 
@@ -283,7 +287,8 @@ a turntable.
 
 Lever-arm (centripetal / tangential) acceleration at the mount point, EDF vibration, sensitivity versus temperature,
 magnetometer error correlated with motor current, WIT's proprietary filter, serial-protocol packet timing beyond
-one fixed latency. Physics runs at 480 Hz; the sensor cannot report faster than that.
+one fixed latency. The sensor cannot report faster than the physics step (120 Hz in missions), and its latency is rounded
+to whole substeps (see `timing`).
 
 ## References
 

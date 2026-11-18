@@ -46,7 +46,7 @@ Required keys:
 | `body_link_name`                | `Body`                                                                                                     |
 | `fin_link_names`                | `[FwdFin, RightFin, AftFin, LeftFin]`                                                                      |
 | `fin_joint_names`               | `[joint_FwdFin, joint_RightFin, joint_AftFin, joint_LeftFin]`                                              |
-| `hinge_axes` (4×3 unit vectors) | FwdFin: `[0,1,0]` / RightFin: `[-1,0,0]` / AftFin: `[0,-1,0]` / LeftFin: `[1,0,0]`                         |
+| `hinge_axes` (4×3 unit vectors) | Radial spans (2026-09-14 correction), FwdFin: `[1,0,0]` / RightFin: `[0,1,0]` / AftFin: `[-1,0,0]` / LeftFin: `[0,-1,0]` |
 | `joint_limits` (rad)            | `[-0.262, 0.262]` × 4 (±15°)                                                                               |
 | `fin_cop_positions` (4×3, m)    | FwdFin: `[0.04,0,0.10]` / RightFin: `[0,0.04,0.10]` / AftFin: `[-0.04,0,0.10]` / LeftFin: `[0,-0.04,0.10]` |
 

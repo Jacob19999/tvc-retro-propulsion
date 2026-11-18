@@ -146,6 +146,14 @@ class NavFusion:
         self._initialised = False
         self._truth = None          # latest true (q, position, velocity, body rate), for the telemetry only
 
+    @property
+    def timing(self) -> dict:
+        """Delivered output rate and latency of each aiding sensor on the physics grid."""
+        sensors = dict(rangefinder=self.rangefinder, flow=self.flow, baro=self.baro)
+        if self.params.marker_enabled:
+            sensors["marker"] = self.marker
+        return {name: sensor.sampler.timing for name, sensor in sensors.items()}
+
     # ---- estimate ---------------------------------------------------------------
 
     @property

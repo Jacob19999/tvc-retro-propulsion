@@ -29,7 +29,7 @@ Mankato, MN, USA}
 \maketitle
 
 \begin{abstract}
-This paper studies closed-loop control of a thrust-vectored electric ducted fan (EDF) vertical take-off and landing (VTOL) vehicle whose only attitude actuators are four jet vanes immersed in the fan exhaust. Attitude authority is therefore coupled to the throttle state, and every change in rotor speed exchanges angular momentum with the airframe. We develop a GPU-accelerated simulation in NVIDIA Isaac Sim and, in this revision, correct its physics: a finite-momentum jet model replaces independent per-vane lift forces, the EDF is coupled to a LiPo equivalent circuit, the full rotor spool and gyroscopic reactions are integrated with an energy-conserving implicit-midpoint scheme, and external forces are applied about the true center of mass. On the corrected plant we compare model-free Proximal Policy Optimization (PPO) with a convex-optimization guidance controller that adapts the lossless-convexification powered-descent method of A\c{c}{\i}kme\c{s}e and Ploen to a constant-mass, battery-powered vehicle. The planner minimizes electrical energy with a power-cone objective and adds a thrust-rate bound derived from the vanes' yaw authority. It landed in all seven benchmark missions within the vehicle's envelope, at touchdown speeds of 0.146--0.184\,m/s and 0.05--0.40\,m from the pad center. These missions included combined wind, sensor noise and center-of-mass offset, a 50\,m cold-rotor start, and a two-waypoint route. The controller also flew a 100\,s three-hover route, and it landed four further starts from about 100\,m in wind with sensor noise, at initial speeds up to 30\,m/s. A PID baseline touched down at 1.50\,m/s on the default mission. On the same plant, the best PPO policy reached 1.3\% success on its full randomized waypoint task after 700 million transitions. On this experiment, explicit model-based convex guidance substantially outperforms model-free PPO. We identify the rotor--body angular-momentum exchange as the dominant obstacle to learning, and discuss the transfer risks of both approaches.
+This paper studies closed-loop control of a thrust-vectored electric ducted fan (EDF) vertical take-off and landing (VTOL) vehicle whose only attitude actuators are four jet vanes immersed in the fan exhaust. Attitude authority is therefore coupled to the throttle state, and every change in rotor speed exchanges angular momentum with the airframe. We develop a GPU-accelerated simulation in NVIDIA Isaac Sim and, in this revision, correct its physics: a finite-momentum jet model replaces independent per-vane lift forces, the EDF is coupled to a LiPo equivalent circuit, the full rotor spool and gyroscopic reactions are integrated with an energy-conserving implicit-midpoint scheme, and external forces are applied about the true center of mass. On the corrected plant we compare model-free Proximal Policy Optimization (PPO) with a convex-optimization guidance controller that adapts the lossless-convexification powered-descent method of A\c{c}{\i}kme\c{s}e and Ploen to a constant-mass, battery-powered vehicle. The planner minimizes electrical energy with a power-cone objective and adds a thrust-rate bound derived from the vanes' yaw authority. On the momentum-bounded vane plant, with a scheduled gyroscopic LQR attitude regulator, it landed all eight benchmark missions, each started with the rotor spinning, at touchdown speeds of 0.136--0.178\,m/s and 0.004--0.146\,m from the pad center. These missions included combined wind, sensor noise and center-of-mass offset, a 50\,m start, a fly-through-and-hover route and a 120\,s three-hover trial. A cold rotor cannot be spun up in flight on this plant, because the body takes the rotor's angular momentum. A PID baseline tuned on an earlier vane model is not plant-aware and finished 11\,m from the pad. On the same plant, the best PPO policy reached 1.3\% success on its full randomized waypoint task after 700 million transitions. On this experiment, explicit model-based convex guidance substantially outperforms model-free PPO. We identify the rotor--body angular-momentum exchange as the dominant obstacle to learning, and discuss the transfer risks of both approaches.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -413,7 +413,7 @@ The inner loops are as follows. \textbf{Tracking} commands $\mathbf{a}_{\text{cm
 reduced the coning to \SI{1.2}{\degree\per\second} in the replica. In Isaac it reduced whole-flight roll/pitch RMS from \SI{14.1}{\degree\per\second} to \SI{1.7}{\degree\per\second} on the default mission. Over-compensation (a true deadband of zero) only dithers, at \SI{1.7}{\degree\per\second}. Under-compensation leaves proportionally more coning, so the real deadband must be measured on the bench.
 
 \begin{table}[htbp]
-\caption{Identified Plant Models Used to Set the Convex Controller Gains}
+\caption{Identified Plant Models Used to Set the Convex Controller Gains (Intermediate Plant)}
 \label{tab:sysid}
 \centering
 \footnotesize
@@ -430,6 +430,8 @@ Vanes & $\tau \approx \SI{0.08}{\second}$, slew $\approx$ \SI{2.5}{\radian\per\s
 \end{tabular}
 \end{table}
 
+
+\textbf{Momentum-bounded vanes.} The controller version above, and Table~\ref{tab:sysid}, were identified and tuned on an intermediate plant with independent per-vane forces and the \SI{0.27}{\newton\metre\second\per\radian} damper (Table~\ref{tab:ppo_corrected}, first row). On the momentum-bounded plant its proportional-derivative attitude law is linearly unstable throughout the flight range: the rotor's nutation at $H/I \approx \SI{2.5}{\hertz}$ lies where the vanes lag more than \SI{90}{\degree}. The final controller therefore replaces it with a discrete LQR on the full attitude and vane-actuator state, scheduled on rotor fraction, with an attitude-error integral that holds a center-of-mass trim. It derives its thrust-rate, attitude-slew and duty-slew bounds from the probed vane authority. A companion paper describes it in detail \cite{b28}.
 
 \section{Learning Algorithm}
 
@@ -690,11 +692,40 @@ Fig.~\ref{fig:training_curves} shows the mean episode reward over the course of 
 \subsection{Convex Guidance on the Corrected Plant}
 \label{sec:convex_results}
 
-Each mission is flown once in Isaac Sim on the planned 8S profile with a full LiPo, unless noted, and succeeds only on a LANDED contact that stays settled after motor shutdown. The missions cover four conditions. A \emph{cold} start has the rotor stopped at $t = 0$, so the vehicle falls while spooling up; a \emph{warm} start has the rotor at hover speed. The \emph{combined} disturbance applies wind with gusts, sensor noise, and a center-of-mass shift together. Table~\ref{tab:convex_results} lists the benchmark missions with the final controller.
+Each mission is flown once in Isaac Sim on the planned 8S profile with a full LiPo, unless noted, and succeeds only on a LANDED contact that stays settled after motor shutdown. The missions cover four conditions. A \emph{cold} start has the rotor stopped at $t = 0$, so the vehicle falls while spooling up; a \emph{warm} start has the rotor at hover speed. The \emph{combined} disturbance applies wind with gusts, sensor noise, and a center-of-mass shift together.
+
+Two sets of convex results exist, on two plants. Table~\ref{tab:convex_results} lists the benchmark on the momentum-bounded mission plant, with the final controller. This is the plant PPO was evaluated on below. Table~\ref{tab:convex_intermediate} lists the earlier benchmark on the intermediate plant, with the second-pass PD controller. That benchmark was flown before the mission plant switched to momentum vanes and is kept for the record.
 
 \begin{table*}[htbp]
-\caption{Convex Guidance: Benchmark Missions on the Corrected Plant (Final Controller)}
+\caption{Convex Guidance: Benchmark Missions on the Momentum-Vane Mission Plant (Final Controller, Warm Rotor)}
 \label{tab:convex_results}
+\centering
+\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Mission} & \textbf{Outcome} & \textbf{Impact (m/s)} & \textbf{Pad err. (m)} & \textbf{Roll/pitch RMS, flight/terminal (\si{\degree\per\second})} & \textbf{Vanes saturated} \\
+\midrule
+Default, 18\,m & Landed & 0.178 & 0.017 & 0.7 / 0.8 & 0.0\% \\
+Hot hop, 3\,m & Landed & 0.154 & 0.045 & 5.6 / 3.9 & 0.1\% \\
+7\,m offset + crosswind & Landed & 0.159 & 0.052 & 6.8 / 2.7 & 0.3\% \\
+Legacy 6S pack, 8\,m & Landed & 0.175 & 0.051 & 7.3 / 1.4 & 0.1\% \\
+High start, 50\,m & Landed & 0.152 & 0.004 & 0.7 / 0.7 & 0.0\% \\
+Route (fly-through + hover) & Landed & 0.152 & 0.098 & 7.3 / 3.3 & 0.2\% \\
+Trial: 50\,m, three hovers, 120\,s & Landed at 99\,s & 0.148 & 0.063 & 3.8 / 3.2 & 0.1\% \\
+Combined disturbances, $-5$\,m/s & Landed & 0.136 & 0.146 & 9.3 / 4.6 & 6.8\% \\
+\midrule
+Default, 18\,m, \emph{cold} rotor & Crashed (\SI{6.8}{\metre\per\second}) & --- & --- & body yaw \SI{1781}{\degree\per\second} & --- \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+On the momentum plant the final controller landed all eight benchmark missions. Touchdown speeds were 0.136--\SI{0.178}{\metre\per\second} and pad errors 0.004--\SI{0.146}{\metre}. The 1--\SI{4}{\hertz} attitude limit cycles of the PD law are gone, and vane saturation stays at or below 0.3\% except with the \SI{\pm1}{\centi\metre} center-of-mass shift. A cold in-air start is outside this plant's envelope. Spinning the rotor up moves \SI{0.78}{\newton\metre\second} of angular momentum into a body whose vanes hold only about \SI{0.3}{\newton\metre} in yaw, and the current-limited motor needs about \SI{1.3}{\second} to reach hover speed. The vehicle spun to \SI{1781}{\degree\per\second} and crashed at \SI{6.8}{\metre\per\second}. The rotor must therefore be spooled up on the pad.
+
+Table~\ref{tab:convex_intermediate} lists the earlier, intermediate-plant benchmark.
+
+\begin{table*}[htbp]
+\caption{Convex Guidance on the Intermediate Plant (Independent Vane Forces, Tuned Damper; Second-Pass PD Controller)}
+\label{tab:convex_intermediate}
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llcccccc}
@@ -717,9 +748,9 @@ Legacy 6S default & 18\,m, $-1$\,m/s, cold & Hard landing & 2.56 & 0.38 & 11.7 &
 \end{tabular}}
 \end{table*}
 
-The controller landed all seven benchmark missions within the vehicle's envelope. Touchdown speeds were 0.146--\SI{0.184}{\metre\per\second} (gate \SI{0.25}{\metre\per\second}) and pad errors 0.05--\SI{0.40}{\metre} (gate \SI{0.5}{\metre}). The whole-flight roll/pitch rates were 1.5--\SI{13.3}{\degree\per\second} RMS. The 50\,m start obeys the \SI{4}{\metre\per\second} speed bound. Its remaining \SI{5.9}{\metre\per\second} peak is the fall during cold spool-up, before the first plan. The long route flew three hover waypoints with 10\,s holds and then landed after \SI{99.8}{\second}, 0.16\,m from the pad; its roll/pitch RMS of \SI{3.9}{\degree\per\second} compares with \SI{15.8}{\degree\per\second} before the deadband inverse. After the benchmark, four further missions from 100\,m in wind with sensor noise all landed. Three started descending at \SI{20}{\metre\per\second}, two of them with a total speed of \SI{30}{\metre\per\second}. The fourth started 86\,m from the pad horizontally, descending at \SI{5.5}{\metre\per\second}, and flew one waypoint. Their impacts were 0.156--\SI{0.187}{\metre\per\second} and their pad errors 0.07--\SI{0.28}{\metre}, in 15--\SI{49}{\second}. A fifth such mission was cancelled by the operator and is excluded.
+On the intermediate plant, the second-pass controller landed all seven benchmark missions within that plant's envelope. Touchdown speeds were 0.146--\SI{0.184}{\metre\per\second} (gate \SI{0.25}{\metre\per\second}) and pad errors 0.05--\SI{0.40}{\metre} (gate \SI{0.5}{\metre}). The whole-flight roll/pitch rates were 1.5--\SI{13.3}{\degree\per\second} RMS. The 50\,m start obeys the \SI{4}{\metre\per\second} speed bound. Its remaining \SI{5.9}{\metre\per\second} peak is the fall during cold spool-up, before the first plan. The long route flew three hover waypoints with 10\,s holds and then landed after \SI{99.8}{\second}, 0.16\,m from the pad; its roll/pitch RMS of \SI{3.9}{\degree\per\second} compares with \SI{15.8}{\degree\per\second} before the deadband inverse. After the benchmark, four further missions from 100\,m in wind with sensor noise all landed. Three started descending at \SI{20}{\metre\per\second}, two of them with a total speed of \SI{30}{\metre\per\second}. The fourth started 86\,m from the pad horizontally, descending at \SI{5.5}{\metre\per\second}, and flew one waypoint. Their impacts were 0.156--\SI{0.187}{\metre\per\second} and their pad errors 0.07--\SI{0.28}{\metre}, in 15--\SI{49}{\second}. A fifth such mission was cancelled by the operator and is excluded.
 
-The two failures lie outside the vehicle's physical envelope rather than the controller's. In the cold-rotor combined case, full thrust is commanded by $t = \SI{0.5}{\second}$. However, the energy cap (\ref{eq:energy_cap}) lets the motor add rotor energy at only about \SI{3}{\kilo\watt}. Thrust therefore reaches \SI{40}{\newton} at \SI{3.5}{\metre} altitude, with the vehicle still falling at \SI{6.8}{\metre\per\second}, which needs more than \SI{5}{\metre} to stop. On the legacy 6S pack, sag reduces the thrust-to-weight ratio to about 1.1, which cannot arrest the fall built up during a cold spool-up.
+The two intermediate-plant failures lie outside that plant's physical envelope rather than the controller's. In the cold-rotor combined case, full thrust is commanded by $t = \SI{0.5}{\second}$. However, the energy cap (\ref{eq:energy_cap}) lets the motor add rotor energy at only about \SI{3}{\kilo\watt}. Thrust therefore reaches \SI{40}{\newton} at \SI{3.5}{\metre} altitude, with the vehicle still falling at \SI{6.8}{\metre\per\second}, which needs more than \SI{5}{\metre} to stop. On the legacy 6S pack, sag reduces the thrust-to-weight ratio to about 1.1, which cannot arrest the fall built up during a cold spool-up.
 
 \subsection{PPO on the Corrected Plant}
 \label{sec:ppo_corrected}
@@ -750,10 +781,10 @@ The same 750M-step policy was flown through mission control on two three-waypoin
 \subsection{Comparison}
 \label{sec:comparison}
 
-Table~\ref{tab:comparison} compares the three controllers on the corrected plant. The PID baseline flew the default mission with the same plant and battery and touched down at \SI{1.50}{\metre\per\second}, six times the soft-landing gate.
+Table~\ref{tab:comparison} compares the three controllers on the momentum-vane plant. The PID baseline was tuned on the intermediate plant and is not plant-aware: on the momentum plant it timed out \SI{11}{\metre} from the pad on the default mission. On the intermediate plant it had touched down at \SI{1.50}{\metre\per\second}, six times the soft-landing gate.
 
 \begin{table}[htbp]
-\caption{Controllers on the Corrected 8S Plant}
+\caption{Controllers on the Momentum-Vane 8S Plant}
 \label{tab:comparison}
 \centering
 \footnotesize
@@ -762,18 +793,18 @@ Table~\ref{tab:comparison} compares the three controllers on the corrected plant
 \toprule
  & \textbf{Convex} & \textbf{PID} & \textbf{PPO} \\
 \midrule
-Default mission (18\,m, cold) & Landed, 0.146\,m/s, 0.08\,m & 1.50\,m/s touchdown & Outside envelope (cold rotor) \\
-Benchmark landings & 7/7 & --- & --- \\
+Default mission (18\,m) & Landed (warm), 0.178\,m/s, 0.017\,m & Timed out 11\,m off (warm) & 0\% (16--20\,m, cold) \\
+Benchmark landings & 8/8 & --- & --- \\
 Waypoint routes & 2/2 landed & Not supported & 1.3\% full-task success \\
-Soft landing (0.25\,m/s gate) & Yes, 0.146--0.189\,m/s & No & Not yet learned \\
-Cold-rotor starts & Landed when recoverable & 1.50\,m/s touchdown & Not trained \\
+Soft landing (0.25\,m/s gate) & Yes, 0.136--0.178\,m/s & No & Not yet learned \\
+Cold-rotor starts & Outside envelope (rotor momentum) & --- & 0\% \\
 Training cost & None & None & 700M transitions \\
 Online cost & 30--110\,ms per plan & Negligible & One MLP pass \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-On this experiment, the convex controller is clearly better. It lands softly and on the pad from every in-envelope start tested, including combined disturbances and routes, whereas PPO has not learned to land softly on the corrected plant. The comparison has limits. The convex controller was evaluated on 12 hand-specified missions, each flown once, whereas PPO was evaluated on thousands of randomized episodes. The convex controller has not yet been run on PPO's randomized waypoint task. Running it there is the next step toward a like-for-like success rate.
+On this experiment, the convex controller is clearly better. It lands softly and on the pad from every in-envelope start tested, including combined disturbances and routes, whereas PPO has not learned to land softly on the corrected plant. The comparison has limits. On this plant the convex controller was evaluated on nine hand-specified missions, each flown once, whereas PPO was evaluated on thousands of randomized episodes. The convex controller has not yet been run on PPO's randomized waypoint task. Running it there is the next step toward a like-for-like success rate.
 
 
 \section{Discussion}
@@ -788,11 +819,11 @@ The comparison also shows that the landing results of PPO depended strongly on t
 
 \subsection{Rotor Angular Momentum as the Dominant Difficulty}
 
-Both approaches were shaped by the rotor. Earlier landing-first PPO runs held mean peak yaw rates of 1{,}625--1{,}651\,\si{\degree\per\second} from 32.5M to 200M transitions. That is the momentum exchange predicted for their descent throttle swing (0.84 to 0.23). Open-loop checks confirm the \SI{46.5}{\radian\per\second} per unit coupling to within 5--10\%, with no drift from swirl. The convex controller's worst transient, a cold spool-up, yaws the body at up to \SI{148}{\degree\per\second} regardless of the controller, because the rotor's angular momentum comes from the airframe. Rotor inertia is an estimate, and the yaw coupling scales linearly with it. It should be measured, for example by a spin-down test, before either controller is trusted on hardware.
+Both approaches were shaped by the rotor. Earlier landing-first PPO runs held mean peak yaw rates of 1{,}625--1{,}651\,\si{\degree\per\second} from 32.5M to 200M transitions. That is the momentum exchange predicted for their descent throttle swing (0.84 to 0.23). Open-loop checks confirm the \SI{46.5}{\radian\per\second} per unit coupling to within 5--10\%, with no drift from swirl. A cold spool-up yaws the body regardless of the controller, because the rotor's angular momentum comes from the airframe. On the intermediate plant, whose tuned damper absorbed part of it, the convex controller's cold spool-up yawed the body at up to \SI{148}{\degree\per\second}. On the momentum plant the same spool-up spun the body to \SI{1781}{\degree\per\second}. Rotor inertia is an estimate, and the yaw coupling scales linearly with it. It should be measured, for example by a spin-down test, before either controller is trusted on hardware.
 
 \subsection{Limitations of the Convex Controller}
 
-The convex controller is not model-free. Its gains, thrust bounds and deadband compensation come from the simulator's estimated vane, servo and motor models, and they must be re-identified on hardware. Lateral precision (0.05--\SI{0.40}{\metre}) is now set by a deliberately slow lateral loop. Its gains were chosen while the coning limit cycle was present, and higher gains landed within \SI{0.04}{\metre} in the offline replica. The attitude loop is proportional-derivative only, so a center-of-mass offset leaves a steady attitude error (\SI{1.7}{\degree} in the combined-disturbance mission). A \SI{1}{\centi\metre} lateral offset can drift the vehicle off the pad during terminal descent. A plan takes 30--\SI{110}{\milli\second} against a \SI{33}{\milli\second} control period, so real-time use requires a latency-compensating state predictor. The long route plus landing at the enforced \SI{4}{\metre\per\second} took about \SI{100}{\second}, and a \SI{100}{\second} mission window was too short by a fraction of a second.
+The convex controller is not model-free. Its gains, thrust bounds and deadband compensation come from the simulator's estimated vane, servo and motor models, and they must be re-identified on hardware. On the momentum plant the lateral loop was re-tuned with the LQR (pad errors 0.004--\SI{0.146}{\metre}), and the LQR's attitude-error integral holds a center-of-mass trim. The center of mass remains the tightest limit. A \SI{1}{\centi\metre} offset needs about \SI{10}{\degree} of the vanes' \SI{14}{\degree} of usable trim, so the airframe must be balanced to a few millimetres. A plan takes 30--\SI{110}{\milli\second} against a \SI{33}{\milli\second} control period. The controller now models planning latency and can solve in a separate process, but the latency on the target flight computer has not yet been measured. The long route plus landing at the enforced \SI{4}{\metre\per\second} took about \SI{100}{\second}, and a \SI{100}{\second} mission window was too short by a fraction of a second.
 
 \subsection{Comparison with Quadrotor RL}
 
@@ -807,7 +838,7 @@ The corrected simulation models battery voltage sag, finite jet momentum, full r
     \item \textbf{Jet and vane model fidelity.} Equal streamtube sharing, vane coefficients, residual swirl fraction and COP positions are estimates. Ground effect, recirculation and wake interactions are not modeled.
     \item \textbf{Servo nonlinearities.} The \SI{1}{\degree} deadband is an estimate that the deadband inverse relies on. Load-dependent speed and temperature drift are not captured.
     \item \textbf{Mass properties.} Mass and inertia come from the authored USD, not from a weighing or inertia test.
-    \item \textbf{Latency.} Planner solve time and sensor-to-actuator delay are not yet simulated.
+    \item \textbf{Latency.} Planning latency and IMU latency are modeled, but neither has been measured on the target hardware.
 \end{itemize}
 
 
@@ -816,8 +847,8 @@ The corrected simulation models battery voltage sag, finite jet momentum, full r
 This paper presented a GPU-accelerated Isaac Sim environment for a thrust-vectored EDF VTOL vehicle. The physics was corrected for finite jet momentum, battery coupling, full rotor angular-momentum reactions with energy-conserving integration, and force application about the true center of mass. On that plant we compared model-free PPO with a convex-optimization guidance controller. The key findings are:
 
 \begin{enumerate}
-    \item Convex guidance based on lossless convexification \cite{b21} controls this vehicle well once adapted to it. With a first-order-hold thrust profile, a thrust-rate bound from the vanes' yaw authority, and a minimum-energy power-cone objective, it landed all seven in-envelope benchmark missions softly and on the pad. These included combined disturbances, a 50\,m cold-rotor start and a waypoint route. It also flew a 100\,s three-hover route and landed four further starts from about 100\,m in wind at initial speeds of up to \SI{30}{\metre\per\second}.
-    \item On the corrected plant, the convex controller substantially outperforms PPO: the best PPO policy reached 1.3\% full-task success after 700M transitions and did not learn soft landing. A PID baseline also failed the soft-landing gate on the default mission.
+    \item Convex guidance based on lossless convexification \cite{b21} controls this vehicle well once adapted to it. With a first-order-hold thrust profile, a thrust-rate bound from the vanes' yaw authority, and a minimum-energy power-cone objective, and with a gyroscopic LQR attitude regulator on the momentum-bounded plant, it landed all eight benchmark missions softly and on the pad. These included combined disturbances, a 50\,m start, a waypoint route and a 120\,s three-hover trial. Cold in-air rotor starts are outside that plant's envelope. On the earlier intermediate plant the PD-law controller had landed seven benchmark missions, and it also landed four further starts from about 100\,m in wind at initial speeds of up to \SI{30}{\metre\per\second}.
+    \item On the corrected plant, the convex controller substantially outperforms PPO: the best PPO policy reached 1.3\% full-task success after 700M transitions and did not learn soft landing. A PID baseline tuned on the intermediate plant finished 11\,m from the pad on the default mission.
     \item The rotor--body angular-momentum exchange (\SI{46.5}{\radian\per\second} of body yaw per unit change in rotor fraction) is the dominant control difficulty. It sets the admissible throttle rate for both controllers and couples PPO's throttle exploration to yaw.
     \item PPO's landing success depended strongly on non-physical plant terms: 95.7\% on a plant with unbounded vane forces and a tuned damper, and 0\% once they were corrected. Physics verification must precede any claim of learned control.
     \item The original findings on reward design still hold: initialization priors and terminal rewards that dominate integrated per-step costs are necessary to avoid degenerate PPO optima.
@@ -827,7 +858,7 @@ Future work will address the following directions:
 
 \begin{itemize}
     \item \textbf{Like-for-like evaluation.} Run the convex controller on PPO's randomized waypoint task and benchmark routes to obtain directly comparable success rates.
-    \item \textbf{Convex controller refinement.} Re-tune the lateral loop now that the coning is removed, add a body-frame attitude integrator for center-of-mass offsets, and add a latency-compensating state predictor for real-time solves.
+    \item \textbf{Convex controller refinement.} Add a disturbance-torque observer to separate center-of-mass trim from manoeuvre lag, balance the airframe, and validate planning latency on the target flight computer.
     \item \textbf{Hybrid approaches.} Investigate learning methods that use the convex planner explicitly, for example as a teacher or as a guidance layer, as part of the task definition.
     \item \textbf{Gated Transformer-XL (GTrXL) policy.} Replace the feed-forward MLP with a GTrXL architecture \cite{b16, b17} to provide temporal context for disturbances and long descents \cite{b19, b20}. This requires a sequence-aware PPO optimizer.
     \item \textbf{Hardware identification and validation.} Measure the 8S thrust and power maps, rotor inertia (spin-down test), servo deadband and vane forces, re-identify the controller gains, and validate on the physical testbed.
@@ -869,6 +900,7 @@ AI-assisted tools (Claude Opus 4.6 and Claude Opus 5.5, Anthropic) were used for
 \bibitem{b25} T.~Lee, M.~Leok, and N.~H.~McClamroch, ``Geometric tracking control of a quadrotor UAV on SE(3),'' in \textit{Proc. 49th IEEE Conf. Decision and Control}, 2010, pp.~5420--5425.
 \bibitem{b26} M.~Drela, ``QPROP formulation,'' MIT Aeronautics and Astronautics, Tech. Note, 2006.
 \bibitem{b27} A.~Y.~Ng, D.~Harada, and S.~Russell, ``Policy invariance under reward transformations: Theory and application to reward shaping,'' in \textit{Proc. ICML}, 1999, pp.~278--287.
+\bibitem{b28} T.~Zijian, ``Momentum-consistent physics, GPU simulation and convex powered-descent guidance for a jet-vane thrust-vectored electric ducted fan vehicle,'' manuscript, Minnesota State Univ., Mankato, 2026.
 \end{thebibliography}
 
 \end{document}

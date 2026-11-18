@@ -16,8 +16,8 @@ Phase 1 (simulation) is in progress. The controller in use is explicit convex gu
 
 | Controller | Result on the corrected Isaac Sim plant |
 |------------|------------------------------------------|
-| **Convex (SOCP) guidance** | Landed all 7 benchmark missions inside the vehicle envelope (touchdown 0.146–0.184 m/s, 0.05–0.40 m from pad centre), including combined wind + sensor noise + CoM offset, a 50 m cold-rotor start and a two-waypoint route. Also flew a 100 s three-hover route and landed four ~100 m starts in wind at up to 30 m/s initial speed. |
-| **PID baseline** | Touched down at 1.50 m/s on the default mission (above the 0.5 m/s target). |
+| **Convex (SOCP) guidance** | On the momentum-vane mission plant (coupled-jet vanes, torque-limited motor), landed all 8 recorded benchmark missions inside the vehicle envelope (warm rotor; touchdown 0.136–0.178 m/s, 0.004–0.146 m from pad centre). They include combined wind + sensor noise + CoM offset, a 50 m start, a fly-through + hover route and a 120 s three-hover trial ([fourth pass](simulation/isaac/docs/convex_guidance_2026-09-25.md)). Cold in-air rotor starts remain infeasible on this plant: spool up on the pad. The earlier 7-mission benchmark (touchdown 0.146–0.184 m/s, 0.05–0.40 m), and the four ~100 m starts in wind at up to 30 m/s reported with it, were flown on the legacy vane model with the earlier PD attitude law, before the momentum vanes became the mission plant. |
+| **PID baseline** | Legacy-vane reference only. On the momentum-vane plant it is not plant-aware and timed out 11 m from the pad (Isaac `6421f6ec55a4`); its first-pass legacy-plant run touched down at 1.50 m/s. |
 
 The dominant physical obstacle is **rotor–body angular-momentum exchange**: every throttle change yaws the airframe (~46.5 rad/s body yaw per unit throttle change in the unmitigated plant), while the four jet vanes provide only ~0.3 N·m of yaw authority.
 
@@ -34,10 +34,16 @@ The dominant physical obstacle is **rotor–body angular-momentum exchange**: ev
   - Added constraints: a thrust-vector rate bound derived from the vanes' yaw authority, a gate approached from above, and waypoint nodes.
   - A servo-deadband inverse removed a 1 Hz gyroscopic coning limit cycle, cutting hover body-rate RMS from 15 to 1.5 °/s.
 - **IMU measurement model** ([imu_model.md](simulation/isaac/docs/imu_model.md)). An opt-in chain models the WTGAHRS1: sensor bias and drift, 20 Hz low-pass, output rate, latency and an onboard attitude filter. Most parameters are placeholders until bench data exists (`tools/imu_allan_variance.py`).
+- **Review 2026-10-03** ([physics and simulation paper](Paper/physics_simulation/physics_simulation.tex)).
+  - The duct flow's Coriolis reaction completes the intake-drag jet-damping bookkeeping (`dynamics.inlet_momentum_drag.duct_coriolis`; not yet re-flown in Isaac).
+  - The intake station is the duct lip measured from the USD mesh (FRD z -0.017 m, `tools/measure_duct_stations.py`), not the top of the frame; this cut the intake's crosswind pitching moment 14x.
+  - Sensor models report the latency and output rate the physics grid actually delivers (`sensor_timing` in mission metadata) and warn when rounding is material.
+  - The planner rejects plans whose lossless relaxation is not tight, which the thrust-rate bound could cause.
 - **Mission Control** ([mission_control.md](simulation/isaac/docs/mission_control.md)). A local web console (`simulation/isaac/mission_control/start.ps1`, http://127.0.0.1:8830) plans and launches Isaac missions with convex guidance. It replays telemetry on a 3D vehicle model and shows convex-guidance diagnostics.
 
 ### Next steps
 
+- Re-fly the convex benchmark on the corrected plant (duct stations, duct Coriolis reaction, planner gap guard): from `simulation/isaac` with the Isaac Python, `python tools/refly_missions.py --benchmark` (`--dry-run` first lists the plant changes against each recording)
 - Measure EDF rotor inertia and servo deadband on hardware, then begin HIL integration
 - Characterize the WTGAHRS1 on the bench and replace the IMU model's placeholder parameters
 - Wire the IMU model into mission control and fly convex missions with it enabled

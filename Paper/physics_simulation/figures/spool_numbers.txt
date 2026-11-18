@@ -1,0 +1,4 @@
+free: t(0.84)=0.275s, peak spool-up torque -6.20 N m, peak cut torque 5.21 N m, fraction 1 s after cut 0.001
+limited: t(0.84)=1.383s, peak spool-up torque -0.76 N m, peak cut torque 0.98 N m, fraction 1 s after cut 0.526
+coupled: t(0.84)=1.383s, peak spool-up torque -0.76 N m, peak cut torque 0.53 N m, fraction 1 s after cut 0.545
+coupled: min bus 30.54 V, peak current 120.0 A, bus at hover 31.39 V

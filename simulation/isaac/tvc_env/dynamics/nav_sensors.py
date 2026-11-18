@@ -60,10 +60,13 @@ def slant_range(position_z: Tensor, cos_t: Tensor, mount_down_m: float) -> Tenso
 class _Sampler:
     """Fixed-rate sampling on the physics grid plus a fixed transport latency."""
 
-    def __init__(self, dt: float, rate_hz: float, latency_s: float):
+    def __init__(self, dt: float, rate_hz: float, latency_s: float, name: str = "sensor"):
+        from tvc_env.dynamics.sensor_timing import check
         self.dt = float(dt)
         self.rate = min(float(rate_hz), 1.0 / self.dt)
         self.age = int(round(latency_s / self.dt))
+        # What the physics grid actually delivers (warns when it differs materially).
+        self.timing = check(name, self.dt, rate_hz, latency_s)
         self._phase = 0.0
         self._step = 0
         self._pending: list[tuple[int, Measurement]] = []
@@ -114,7 +117,7 @@ class Rangefinder:
 
     def __init__(self, n: int, device, dt: float, params: RangefinderParams, generator=None):
         self.n, self.device, self.p, self._gen = n, torch.device(device), params, generator
-        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s)
+        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s, "rangefinder")
         self._u = torch.zeros(n, device=self.device)         # per-episode systematic error, in [-1, 1]
         self._cos_limit = math.cos(math.radians(params.max_tilt_deg))
         self.last_value = torch.zeros(n, device=self.device)
@@ -168,7 +171,7 @@ class OpticalFlow:
 
     def __init__(self, n: int, device, dt: float, params: FlowParams, generator=None):
         self.n, self.device, self.p, self._gen = n, torch.device(device), params, generator
-        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s)
+        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s, "optical flow")
         self._scale = torch.zeros(n, 2, device=self.device)
         self._bias = torch.zeros(n, 2, device=self.device)
         self._cos_limit = math.cos(math.radians(params.max_tilt_deg))
@@ -227,7 +230,7 @@ class Barometer:
 
     def __init__(self, n: int, device, dt: float, params: BaroParams, generator=None):
         self.n, self.device, self.p, self._gen, self.dt = n, torch.device(device), params, generator, float(dt)
-        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s)
+        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s, "barometer")
         self._bias = torch.zeros(n, device=self.device)
         self._phi = math.exp(-self.dt / params.drift_tau_s)
         self.last_value = torch.zeros(n, device=self.device)
@@ -299,7 +302,7 @@ class PadMarker:
 
     def __init__(self, n: int, device, dt: float, params: MarkerParams, generator=None):
         self.n, self.device, self.p, self._gen = n, torch.device(device), params, generator
-        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s)
+        self.sampler = _Sampler(dt, params.rate_hz, params.latency_s, "pad marker")
         self.marker_world = torch.zeros(n, 3, device=self.device)
         self.present = torch.zeros(n, dtype=torch.bool, device=self.device)
         self._boresight = torch.zeros(n, 2, device=self.device)

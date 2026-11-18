@@ -389,6 +389,9 @@ class ImuModel:
         self._rate = min(params.sample_rate_hz, 1.0 / self.dt)
         self._alpha = 1.0 if params.bandwidth_hz <= 0.0 else 1.0 - math.exp(-2.0 * math.pi * params.bandwidth_hz * self.dt)
         self._delay = int(round(params.latency_s / self.dt))
+        # The delivered output rate and latency on the physics grid (warns when they differ materially).
+        from tvc_env.dynamics.sensor_timing import check
+        self.timing = check("IMU", self.dt, params.sample_rate_hz, params.latency_s)
         self._thermal_active = params.gyro.tco > 0.0 or params.accel.tco > 0.0
         self._temp = torch.zeros(num_envs, device=self.device)         # K above the calibration point
         self._temp_target = torch.zeros(num_envs, device=self.device)

@@ -1,0 +1,17 @@
+100 closed-loop landings in 1.0 min wall: landed 100, off_nominal 0, crash 0, lost_attitude 0, timeout 0
+  impact speed, all touchdowns: median 0.149, p95 0.181, max 0.194 m/s
+  pad error, all touchdowns: median 0.082, p95 0.216, max 0.289 m
+  tilt at touchdown: median 2.66, p95 5.11, max 5.48 deg
+  peak attitude error: median 6.40, p95 10.94, max 12.49 deg
+  peak tilt in flight: median 11.51, p95 17.66, max 22.29 deg
+  peak tracking error in powered descent: median 0.700, p95 0.750, max 0.952 m
+  roll/pitch rate RMS after 2 s: median 3.22, p95 5.66, max 7.19 deg/s
+  flight time: median 13.9, p95 18.6, max 22.2 s
+  electrical energy: median 7.91, p95 10.51, max 12.60 Wh
+  largest re-plan solve time per run: median 83, p95 164, max 169 ms
+  re-plans per run: median 20; runs that ever tracked a soft-terminal plan: 15; largest gap of a tracked optimal plan 9.2e-04
+  bus 26-28 V: 27/27 landed, impact median 0.149 m/s
+  bus 28-30 V: 30/30 landed, impact median 0.146 m/s
+  bus 30-33 V: 43/43 landed, impact median 0.151 m/s
+  wind 0-2 m/s: 50/50 landed, pad error median 0.097 m, p95 0.208 m
+  wind 2-4 m/s: 50/50 landed, pad error median 0.069 m, p95 0.214 m

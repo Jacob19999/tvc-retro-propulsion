@@ -1,0 +1,4 @@
+swept area 4780 mm^2: open-rotor far wake 128.0 m/s, ducted exit 90.5 m/s; ideal jet power 3073 W vs 2173 W
+open-rotor (production): hover fraction 0.8409, mdot 0.3157 kg/s, net static thrust 43.07 N (loss 10.3%), authority roll 2.365 yaw 1.720 N m/rad at full speed, vane-flow damping 8.94e-04, jet damping mdot z_e^2 1.14e-03 N m s/rad, intake drag at 4 m/s 1.26 N, intake = body drag at 12.3 m/s
+ducted exit           : hover fraction 0.8184, mdot 0.4344 kg/s, net static thrust 45.46 N (loss 5.3%), authority roll 2.439 yaw 1.774 N m/rad at full speed, vane-flow damping 1.19e-03, jet damping mdot z_e^2 1.56e-03 N m s/rad, intake drag at 4 m/s 1.74 N, intake = body drag at 16.9 m/s
+ratios ducted/production: hover 0.973, mdot 1.376, net 1.056, roll 1.031, yaw 1.031

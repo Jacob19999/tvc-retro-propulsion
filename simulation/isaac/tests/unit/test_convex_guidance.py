@@ -913,6 +913,51 @@ def test_controller_reports_cost_terms_and_flown_cross_track():
     assert telemetry['cross_track_m'] < 1e-3 and telemetry['solver']['route_deviation_m'] >= 0.
 
 
+def _mission_limits(controller, volts=32.):
+    """The limits ConvexGuidanceController._maybe_replan hands the planner at this bus voltage."""
+    from dataclasses import replace
+    available = controller.vehicle.available_thrust_n(volts)
+    ceiling = controller._planning_ceiling(available)
+    return replace(controller._limits, thrust_rate_n_s=controller._thrust_rate(volts),
+                   thrust_min_n=controller._planning_floor(ceiling), thrust_max_n=ceiling,
+                   emergency_thrust_max_n=available,
+                   emergency_thrust_rate_n_s=controller._thrust_rate(volts, controller.spool_rate))
+
+
+def test_thrust_rate_bound_cannot_open_a_convexification_gap(monkeypatch):
+    # Review 2026-10-03: the thrust-rate bound makes thrust a state, outside
+    # Lemma 1. With the mission plant's limits (hover rotor 0.8409, momentum
+    # vanes) a near-vertical entry ramped |u| to 23.4 N under the 24.1 N
+    # floor on two nodes, a 3.2% gap, at the minimum-energy edge of feasibility.
+    import tvc_env.controllers.convex_guidance as convex
+    tolerance = convex.LCVX_GAP_TOLERANCE
+    vehicle_8s = VehicleModel(**{**_with_vanes(MOMENTUM_VANES).__dict__, 'hover_throttle': .8409})
+
+    def plan(tolerance):
+        monkeypatch.setattr(convex, 'LCVX_GAP_TOLERANCE', tolerance)
+        controller = ConvexGuidanceController(settings(), vehicle_8s, (0., 0., 0.), .3125, 1 / 30)
+        controller.guidance.limits = _mission_limits(controller)
+        return controller.guidance.plan([-.28, .82, 18.], [0., 0., -1.], controller.vehicle.weight_n,
+                                        controller.gate), controller.guidance.limits
+
+    unguarded, _ = plan(math.inf)
+    assert unguarded.convexification_gap > .02
+    guarded, limits = plan(tolerance)
+    assert guarded.mode == 'optimal' and guarded.convexification_gap < 1e-6
+    thrust = np.linalg.norm(guarded.thrust_accel, axis=1) * MASS
+    assert thrust.min() >= limits.thrust_min_n - 1e-3
+    # The rho1-respecting plan is slightly longer; offset starts were lossless already and stay identical.
+    assert guarded.duration > unguarded.duration
+    monkeypatch.setattr(convex, 'LCVX_GAP_TOLERANCE', tolerance)
+    controller = ConvexGuidanceController(settings(), vehicle_8s, (0., 0., 0.), .3125, 1 / 30)
+    controller.guidance.limits = _mission_limits(controller)
+    first = controller.guidance.plan([8., 5., 18.], [0., 0., 0.], controller.vehicle.weight_n, controller.gate)
+    monkeypatch.setattr(convex, 'LCVX_GAP_TOLERANCE', math.inf)
+    second = controller.guidance.plan([8., 5., 18.], [0., 0., 0.], controller.vehicle.weight_n, controller.gate)
+    assert first.convexification_gap < 1e-6
+    np.testing.assert_array_equal(first.thrust_accel, second.thrust_accel)
+
+
 def test_landing_leg_never_outruns_its_braking_envelope():
     # Isaac 751dd0214086: from a 4.6 m hover the energy optimum sank at 2.0
     # m/s and braked on the thrust-rate bound; the vehicle touched down at

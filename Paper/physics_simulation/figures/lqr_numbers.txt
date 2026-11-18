@@ -1,0 +1,5 @@
+hover 0.841: PD slowest +1.68 /s at 4.14 Hz; unstable PD modes: [(1.68, 4.14), (1.68, 4.14), (1.05, 1.63), (1.05, 1.63)]
+LQR slowest modes at hover: [(-1.92, 0.0), (-1.92, 0.0), (-3.96, 0.09), (-3.96, 0.09)]; min oscillatory damping ratio 0.46
+PD growth over 0.3-1.0: -0.51 .. +3.30 /s; LQR slowest decay over 0.3-1.0: -1.58 .. -2.04 /s; min LQR damping ratio over 0.3-1.0 0.40
+LQR roll row at hover [z_x z_y e_x e_y p q s_x s_y j_x j_y]: [-3.053, -2.836, -2.683, -2.492, -0.53, 0.424, -0.741, 0.101, -0.468, 0.225]
+rate-command slew bound 18.0 deg/s; planned tilt-rate bound 12.01 deg/s; yaw reserve 0.098 rad of 0.245 rad vane limit

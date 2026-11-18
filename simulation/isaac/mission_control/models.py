@@ -1,6 +1,7 @@
 """Validated mission inputs and fixed local controller choices."""
 from pathlib import Path
 import copy
+import json
 import math
 import yaml
 
@@ -22,8 +23,8 @@ VANE_MODELS = ('momentum',)
 HOME_PAD = dict(name='Home pad', position=[0., 0., 0.])
 MAX_PADS = 4
 PAD_SEPARATION_M = 3.   # pad markings are 2.5 m across
-# 10 simulated minutes: the 8S 5 Ah pack hovers for roughly 6 minutes, so
-# the battery, not the clock, bounds the longest flights.
+# 10 simulated minutes: the 8S 5 Ah pack hovers for roughly 4 minutes (about
+# 2.1 kW from ~148 Wh), so the battery, not the clock, bounds the longest flights.
 MAX_DURATION_S = 600.
 DEFAULTS = dict(name='Landing test', controller='convex', seed=2026, duration_s=120., fast_live=True, cpu_physics=False,
                 hardware_profile='planned_8s', vane_model='momentum',
@@ -343,3 +344,27 @@ def disturbance_config(mission):
 
 def default_mission():
     return copy.deepcopy(DEFAULTS)
+
+
+def read_json(path, default=None):
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return default
+
+
+def recorded_request(path, metadata=None):
+    """Restore diagnostic requests from their recorded, resolved parameters."""
+    if metadata is None:
+        metadata = read_json(path / 'metadata.json', {}) or {}
+    resolved = dict(metadata.get('request') or {})
+    supplied = read_json(path / 'request.json', {}) or {}
+    battery = {**resolved.get('battery', {}), **supplied.get('battery', {})}
+    resolved.update(supplied)
+    if battery:
+        resolved['battery'] = battery
+    if 'vane_model' not in resolved and 'dynamics' in metadata:
+        # Recorded before the field existed: report the plant actually flown.
+        coupled = ((metadata['dynamics'] or {}).get('coupled_jet') or {}).get('enabled')
+        resolved['vane_model'] = 'momentum' if coupled else 'legacy'
+    return resolved

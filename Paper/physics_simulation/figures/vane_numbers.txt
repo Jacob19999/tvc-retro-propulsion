@@ -1,0 +1,3 @@
+turn=0.99950 drag=0.1030 loading=7.610
+15 deg: legacy 20.64 N, momentum 2.667 N, closed 2.691 N, bound 3.108 N
+roll authority full: jet 2.365, legacy 20.041, ratio 8.47

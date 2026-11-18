@@ -1,0 +1,85 @@
+% Layout of an AIAA conference manuscript, built from standard packages so the draft
+% compiles on a stock TeX Live (pdflatex). It follows the AIAA Technical Conference
+% paper guidelines: US letter, 1 in margins, 10 pt Times, 24 pt bold title, bold
+% indented abstract, centred roman-numbered section headings, lettered subsections,
+% "Fig. n" / "Table n" bold captions and bracketed numeric citations.
+% For the final submission, paste the body into the official AIAA template
+% (new-aiaa.cls, distributed by AIAA through Overleaf); no body text depends on this file.
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{newtxtext,newtxmath}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{siunitx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{titlesec}
+\usepackage[font={small,bf},labelfont=bf,labelsep=quad]{caption}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\sisetup{per-mode=symbol, detect-weight=true, group-minimum-digits=5}
+\setlength{\parindent}{0.2in}
+\setlength{\parskip}{0pt}
+\setlist{nosep,leftmargin=0.35in}
+\captionsetup[figure]{name=Fig.}
+\captionsetup[table]{name=Table,position=top}
+\setlength{\bibsep}{2pt}
+\renewcommand{\bibfont}{\small}
+
+% Headings: I. Section (centred), A. Subsection (bold), 1. Subsubsection (italic).
+\renewcommand{\thesection}{\Roman{section}}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+\renewcommand{\thesubsubsection}{\arabic{subsubsection}}
+\makeatletter
+\renewcommand{\p@subsection}{\thesection.}
+\renewcommand{\p@subsubsection}{\thesection.\thesubsection.}
+\makeatother
+\titleformat{\section}{\normalfont\large\bfseries\centering}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\itshape}{\thesubsubsection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{12pt plus 3pt minus 2pt}{6pt}
+\titlespacing*{\subsection}{0pt}{9pt plus 2pt minus 2pt}{3pt}
+\titlespacing*{\subsubsection}{0pt}{6pt plus 2pt minus 1pt}{2pt}
+
+% Title block and abstract.
+\newcommand{\aiaatitle}[1]{\begin{center}\fontsize{24}{28}\selectfont\bfseries #1\par\end{center}\vspace{6pt}}
+\newcommand{\aiaaauthor}[1]{\begin{center}\fontsize{16}{19}\selectfont #1\par\end{center}\vspace{-6pt}}
+\newcommand{\aiaaaffiliation}[1]{\begin{center}\fontsize{12}{14}\selectfont\itshape #1\par\end{center}\vspace{4pt}}
+\newenvironment{aiaaabstract}
+  {\begin{list}{}{\setlength{\leftmargin}{0.5in}\setlength{\rightmargin}{0.5in}\setlength{\listparindent}{0.2in}%
+   \setlength{\itemindent}{0.2in}\setlength{\parsep}{0pt}}\item\relax\bfseries}
+  {\end{list}\vspace{4pt}}
+\newenvironment{nomenclature}
+  {\section*{Nomenclature}\small\setlength{\LTleft}{0pt}\setlength{\LTpre}{0pt}\setlength{\LTpost}{0pt}%
+   \begin{longtable}{@{}l@{\quad=\quad}p{0.78\textwidth}@{}}}
+  {\end{longtable}\addtocounter{table}{-1}\normalsize}
+
+% References kept whole.
+\newcommand{\refalg}[1]{Algorithm~\ref{#1}}
+\newcommand{\refeq}[1]{Eq.~(\ref{#1})}
+\newcommand{\refeqs}[2]{Eqs.~(\ref{#1})--(\ref{#2})}
+\newcommand{\reffig}[1]{Fig.~\ref{#1}}
+\newcommand{\refsec}[1]{Section~\ref{#1}}
+\newcommand{\reftab}[1]{Table~\ref{#1}}
+
+% Notation.
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\ez}{\hat{\vect{e}}_z}
+\newcommand{\wb}{\vect{\omega}}
+\newcommand{\mdot}{\dot{m}}
+\newcommand{\Ir}{I_r}
+\newcommand{\wrot}{\omega_r}
+\newcommand{\wmax}{\omega_{\max}}
+\newcommand{\uj}{u_j}
+\graphicspath{{figures/}{../physics_simulation/figures/}}
