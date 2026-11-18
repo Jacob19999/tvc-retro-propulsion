@@ -1,7 +1,7 @@
-100 closed-loop landings in 1.0 min wall: landed 100, off_nominal 0, crash 0, lost_attitude 0, timeout 0
-  impact speed, all touchdowns: median 0.153, p95 0.182, max 0.189 m/s
-  pad error, all touchdowns: median 0.116, p95 0.264, max 0.297 m
-  tilt at touchdown: median 1.39, p95 3.04, max 3.27 deg
+100 closed-loop runs in 1.0 min wall: landed 100, off_nominal 0, crash 0, lost_attitude 0, timeout 0
+  downward speed, all height crossings: median 0.153, p95 0.182, max 0.189 m/s
+  pad error, all height crossings: median 0.116, p95 0.264, max 0.297 m
+  tilt at height crossing: median 1.39, p95 3.04, max 3.27 deg
   peak attitude error: median 2.86, p95 9.77, max 14.62 deg
   peak tilt in flight: median 10.16, p95 15.55, max 17.77 deg
   peak tracking error in powered descent: median 0.458, p95 0.828, max 1.049 m
@@ -9,9 +9,9 @@
   flight time: median 13.5, p95 18.1, max 22.2 s
   electrical energy: median 7.64, p95 10.15, max 12.66 Wh
   largest re-plan solve time per run: median 85, p95 162, max 171 ms
-  re-plans per run: median 19; runs that ever tracked a soft-terminal plan: 12; largest gap of a tracked optimal plan 7.8e-04
-  bus 26-28 V: 27/27 landed, impact median 0.160 m/s
-  bus 28-30 V: 30/30 landed, impact median 0.151 m/s
-  bus 30-33 V: 43/43 landed, impact median 0.153 m/s
-  wind 0-2 m/s: 50/50 landed, pad error median 0.118 m, p95 0.238 m
-  wind 2-4 m/s: 50/50 landed, pad error median 0.116 m, p95 0.276 m
+  re-plans per run: median 19; runs that ever tracked a soft-terminal plan: 12; largest gap of a tracked hard-terminal plan 7.8e-04
+  bus 26-28 V: 27/27 passed, downward speed median 0.160 m/s
+  bus 28-30 V: 30/30 passed, downward speed median 0.151 m/s
+  bus 30-33 V: 43/43 passed, downward speed median 0.153 m/s
+  wind 0-2 m/s: 50/50 passed, pad error median 0.118 m, p95 0.238 m
+  wind 2-4 m/s: 50/50 passed, pad error median 0.116 m, p95 0.276 m

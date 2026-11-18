@@ -57,7 +57,7 @@ hover = p.hover_fraction()
 
 fig, ax = plt.subplots(figsize=(3.45, 2.2))
 ax.axhline(0.0, color=C["black"], lw=0.8)
-ax.plot(fractions, pd_growth, color=C["red"], label="PD law (pre-2026-09-26)")
+ax.plot(fractions, pd_growth, color=C["red"], label="Earlier PD law")
 ax.plot(fractions, lqr_growth, color=C["blue"], label="Gyroscopic LQR")
 ax.axvline(hover, color=C["grey"], ls=":", lw=0.8)
 ax.set_xlabel(r"Rotor fraction $\omega/\omega_{\max}$")

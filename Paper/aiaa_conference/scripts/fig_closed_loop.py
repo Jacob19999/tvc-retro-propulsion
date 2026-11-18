@@ -184,7 +184,8 @@ def fly(case, max_time=120.0):
     ctrl.close()
     tilt = math.degrees(math.acos(max(-1.0, min(1.0, R[2, 2]))))
     return dict(i=case["i"], outcome=outcome, phase=(ctrl.last_telemetry or {}).get("phase"), height=float(r[2]),
-                impact=float(-v[2]), pad=float(np.linalg.norm(r[:2])), tilt=tilt,
+                impact=float(-v[2]), total_speed=float(np.linalg.norm(v)),
+                horizontal_speed=float(np.linalg.norm(v[:2])), pad=float(np.linalg.norm(r[:2])), tilt=tilt,
                 rate=float(np.degrees(np.linalg.norm((_FRD_TO_ISAAC.T @ w)[:2]))), time=t,
                 energy_wh=energy_j / 3600.0, worst_att=worst_att, worst_tilt=worst_tilt, worst_track=worst_track,
                 worst_speed=worst_speed, pq_rms=float(np.sqrt(np.mean(np.square(pq)))) if pq else 0.0,
@@ -229,18 +230,22 @@ def report(records, wall=None, figure=True):
     plt = style()
     n = len(records)
     counts = {k: sum(r["class"] == k for r in records) for k in ("landed", "off_nominal", "crash", "lost_attitude", "timeout")}
-    print(f"{n} closed-loop landings" + (f" in {wall / 60:.1f} min wall" if wall else "") + ": "
+    print(f"{n} closed-loop runs" + (f" in {wall / 60:.1f} min wall" if wall else "") + ": "
           + ", ".join(f"{k} {v}" for k, v in counts.items()))
     down = [r for r in records if r["outcome"] == "touchdown"]
-    ok = [r for r in records if r["class"] == "landed"]
 
     def stats(name, values, unit, fmt=".3f"):
+        if not values:
+            return
         a = np.asarray(values, float)
         print(f"  {name}: median {np.median(a):{fmt}}, p95 {np.percentile(a, 95):{fmt}}, max {a.max():{fmt}} {unit}")
 
-    stats("impact speed, all touchdowns", [r["impact"] for r in down], "m/s")
-    stats("pad error, all touchdowns", [r["pad"] for r in down], "m")
-    stats("tilt at touchdown", [r["tilt"] for r in down], "deg", ".2f")
+    stats("downward speed, all height crossings", [r["impact"] for r in down], "m/s")
+    if down and all("total_speed" in r and "horizontal_speed" in r for r in down):
+        stats("total body speed, all height crossings", [r["total_speed"] for r in down], "m/s")
+        stats("horizontal body speed, all height crossings", [r["horizontal_speed"] for r in down], "m/s")
+    stats("pad error, all height crossings", [r["pad"] for r in down], "m")
+    stats("tilt at height crossing", [r["tilt"] for r in down], "deg", ".2f")
     stats("peak attitude error", [r["worst_att"] for r in down], "deg", ".2f")
     stats("peak tilt in flight", [r["worst_tilt"] for r in down], "deg", ".2f")
     stats("peak tracking error in powered descent", [r["worst_track"] for r in down], "m")
@@ -248,25 +253,30 @@ def report(records, wall=None, figure=True):
     stats("flight time", [r["time"] for r in down], "s", ".1f")
     stats("electrical energy", [r["energy_wh"] for r in down], "Wh", ".2f")
     stats("largest re-plan solve time per run", [r["max_solve_ms"] for r in down], "ms", ".0f")
-    print(f"  re-plans per run: median {np.median([r['replans'] for r in down]):.0f}; runs that ever tracked a "
-          f"soft-terminal plan: {sum(r['soft_fraction'] > 0 for r in records)}; largest gap of a tracked optimal plan "
+    print(f"  re-plans per run: median {np.median([r['replans'] for r in records]):.0f}; runs that ever tracked a "
+          f"soft-terminal plan: {sum(r['soft_fraction'] > 0 for r in records)}; largest gap of a tracked hard-terminal plan "
           f"{max(r['max_gap'] for r in records):.1e}")
     bad = [r for r in records if r["class"] != "landed"]
     for r in bad[:40]:
-        print(f"  not nominal #{r['i']}: {r['class']}, impact {r['impact']:.2f} m/s, pad {r['pad']:.2f} m, start offset "
+        print(f"  not nominal #{r['i']}: {r['class']}, last downward speed {r['impact']:.2f} m/s, pad {r['pad']:.2f} m, start offset "
               f"{r['offset']:.1f} m alt {r['altitude']:.1f} m vz {r['vz0']:+.1f} m/s, bus {r['volts']:.1f} V, wind "
               f"{r['wind']:.1f} m/s, soft-plan share {r['soft_fraction']:.2f}, t {r['time']:.1f} s, last phase "
               f"{r.get('phase')} at {r.get('height', float('nan')):.2f} m")
-    for lo, hi in ((26, 28), (28, 30), (30, 33)):
-        sel = [r for r in records if lo <= r["volts"] < hi]
-        if sel:
-            print(f"  bus {lo}-{hi} V: {sum(r['class'] == 'landed' for r in sel)}/{len(sel)} landed, impact median "
-                  f"{np.median([r['impact'] for r in sel if r['outcome'] == 'touchdown']):.3f} m/s")
-    for lo, hi in ((0, 2), (2, 4)):
-        sel = [r for r in records if lo <= r["wind"] < hi]
-        print(f"  wind {lo}-{hi} m/s: {sum(r['class'] == 'landed' for r in sel)}/{len(sel)} landed, pad error median "
-              f"{np.median([r['pad'] for r in sel if r['outcome'] == 'touchdown']):.3f} m, p95 "
-              f"{np.percentile([r['pad'] for r in sel if r['outcome'] == 'touchdown'], 95):.3f} m")
+    for field, bins in (("volts", ((26, 28), (28, 30), (30, 33))), ("wind", ((0, 2), (2, 4)))):
+        for lo, hi in bins:
+            subset = [r for r in records if lo <= r[field] < hi]
+            if not subset:
+                continue
+            crossings = [r for r in subset if r["outcome"] == "touchdown"]
+            passed = sum(r["class"] == "landed" for r in subset)
+            if field == "volts":
+                label = f"bus {lo}-{hi} V"
+                summary = f", downward speed median {np.median([r['impact'] for r in crossings]):.3f} m/s" if crossings else ""
+            else:
+                label = f"wind {lo}-{hi} m/s"
+                pad = [r["pad"] for r in crossings]
+                summary = f", pad error median {np.median(pad):.3f} m, p95 {np.percentile(pad, 95):.3f} m" if pad else ""
+            print(f"  {label}: {passed}/{len(subset)} passed{summary}")
 
     if not figure:
         return
@@ -279,8 +289,8 @@ def report(records, wall=None, figure=True):
     ax.set_xlim(0.0, 0.55)
     ax.set_ylim(0.0, 0.3)
     ax.set_xlabel("Pad error (m)")
-    ax.set_ylabel("Impact speed (m/s)")
-    ax.set_title("(a) Touchdown", fontsize=8)
+    ax.set_ylabel("Downward speed (m/s)")
+    ax.set_title("(a) Height crossing", fontsize=8)
     ax = axes[1]
     ax.plot([r["offset"] for r in down], [r["worst_tilt"] for r in down], ".", ms=3, color=C["green"])
     ax.axhline(15.0, color=C["grey"], ls=":", lw=0.8)

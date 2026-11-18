@@ -68,6 +68,21 @@ for _ in range(N_MC):
                   np.array([vh * math.cos(vaz), vh * math.sin(vaz), vz]), volts))
 
 
+def interval_extrema(plan, limits):
+    """Exact minimum thrust and peak unit-direction rate along linear thrust chords."""
+    start = plan.thrust_accel[:-1]
+    delta = np.diff(plan.thrust_accel, axis=0)
+    length_sq = (delta * delta).sum(axis=1)
+    fraction = np.divide(-(start * delta).sum(axis=1), length_sq,
+                         out=np.zeros_like(length_sq), where=length_sq > 0)
+    closest = start + np.clip(fraction, 0, 1)[:, None] * delta
+    norm_sq = (closest * closest).sum(axis=1)
+    # The positive vertical floor of the pointing cone keeps every chord away from zero.
+    rate = np.linalg.norm(np.cross(start, delta), axis=1) / (np.diff(plan.times) * norm_sq)
+    return dict(floor_shortfall=limits.thrust_min_n - limits.mass_kg * np.sqrt(norm_sq.min()),
+                peak_rate=float(np.degrees(rate.max())), rate_exceeded=rate.max() > limits.tilt_rate_rad_s)
+
+
 def run(tolerance):
     cg.LCVX_GAP_TOLERANCE = tolerance
     rows = []
@@ -78,7 +93,8 @@ def run(tolerance):
         took = time.perf_counter() - t0
         rows.append(None if plan is None else dict(
             mode=plan.mode, gap=plan.convexification_gap, solves=plan.solves, ms=1e3 * took, it=plan.iterations,
-            duration=plan.duration, energy=plan.energy_wh, miss=plan.terminal_miss_m))
+            duration=plan.duration, energy=plan.energy_wh, miss=plan.terminal_miss_m,
+            **interval_extrema(plan, guidance.limits)))
     return rows
 
 
@@ -94,15 +110,23 @@ def summarize(name, rows):
     ms = np.array([r["ms"] for r in opt])
     solves = np.array([r["solves"] for r in opt])
     its = np.array([r["it"] for r in opt])
-    print(f"{name}: {len(rows)} starts, optimal {len(opt)}, soft-terminal {len(soft)}, none {sum(r is None for r in rows)}")
+    print(f"{name}: {len(rows)} starts, hard-terminal {len(opt)}, soft-terminal {len(soft)}, none {sum(r is None for r in rows)}")
     print(f"  gap: median {np.median(gaps):.1e}, max {gaps.max():.1e}, >1e-6: {(gaps > 1e-6).sum()}, >1e-3: {(gaps > 1e-3).sum()}")
     print(f"  solve time ms: median {np.median(ms):.0f}, p95 {np.percentile(ms, 95):.0f}, max {ms.max():.0f}; "
-          f"SOCPs median {np.median(solves):.0f}, max {solves.max()}; IPM iterations median {np.median(its):.0f}, max {its.max()}")
+          f"conic solves median {np.median(solves):.0f}, max {solves.max()}; IPM iterations median {np.median(its):.0f}, max {its.max()}")
     return opt, soft
 
 
 raw_opt, _ = summarize("guard off", raw)
 g_opt, g_soft = summarize("guard on ", guarded)
+all_ms = [r["ms"] for r in guarded if r is not None]
+print(f"  guard on, all returned plans: median {np.median(all_ms):.0f} ms, p95 {np.percentile(all_ms, 95):.0f} ms")
+for field, violated, unit in (("floor_shortfall", lambda r: r["floor_shortfall"] > 1e-5, "N"),
+                              ("peak_rate", lambda r: r["rate_exceeded"], "deg/s")):
+    hard_cases = [(i, r) for i, r in enumerate(guarded) if r and r["mode"] == "optimal"]
+    worst_id, worst = max(hard_cases, key=lambda item: item[1][field])
+    print(f"  guarded intervals, {field}: {sum(violated(r) for _, r in hard_cases)}/{len(hard_cases)} exceed; "
+          f"maximum {worst[field]:.4f} {unit} in case {worst_id} (node gap {worst['gap']:.2e})")
 both = [(a, b) for a, b in zip(raw, guarded) if a and b and a["mode"] == b["mode"] == "optimal" and a["gap"] > 1e-3]
 if both:
     dE = np.array([100 * (b["energy"] / a["energy"] - 1) for a, b in both])
@@ -126,7 +150,7 @@ ax.axvline(1e-3, color=C["grey"], ls=":", lw=0.8)
 ax.set_xscale("log")
 ax.set_xlabel(r"Convexification gap $\max_k(\sigma_k-\|u_k\|)/\sigma_k$")
 ax.set_ylabel("Plans")
-ax.set_title("(a) Losslessness", fontsize=8)
+ax.set_title("(a) Node gap", fontsize=8)
 ax.legend(frameon=False, fontsize=6, loc="center right", bbox_to_anchor=(1.0, 0.62))
 ax = axes[1]
 ax.hist([r["ms"] for r in g_opt], bins=30, color=C["blue"], alpha=0.85)
@@ -137,7 +161,7 @@ ax = axes[2]
 xy = np.array([(np.linalg.norm(c[0][:2]), c[0][2]) for c in cases])
 is_opt = np.array([r is not None and r["mode"] == "optimal" for r in guarded])
 is_gap = np.array([a is not None and a["mode"] == "optimal" and a["gap"] > 1e-3 for a in raw])
-ax.plot(xy[is_opt & ~is_gap, 0], xy[is_opt & ~is_gap, 1], ".", ms=2.5, color=C["blue"], label="lossless")
+ax.plot(xy[is_opt & ~is_gap, 0], xy[is_opt & ~is_gap, 1], ".", ms=2.5, color=C["blue"], label="small node gap")
 ax.plot(xy[is_gap, 0], xy[is_gap, 1], "s", ms=3, mfc="none", color=C["orange"], label="gap, repaired")
 ax.plot(xy[~is_opt, 0], xy[~is_opt, 1], "x", ms=3.5, color=C["red"], label="soft-terminal")
 ax.set_xlabel("Initial offset from pad (m)")
@@ -221,24 +245,29 @@ ref_t = np.linspace(3.0, 20.0, 69)
 ref_c = np.array([(lambda s: np.nan if s is None else s.cost)(
     guidance._solve(start, vel0, veh.weight_n, gate, [_Segment("land", float(t), 24)], dict(solves=0))) for t in ref_t])
 ref_ok = ~np.isnan(ref_c)
-t_min = float(ref_t[ref_ok][0])
+first_grid = float(ref_t[ref_ok][0])
+fine_t = 8.45
+fine = guidance._solve(start, vel0, veh.weight_n, gate, [_Segment("land", fine_t, 24)], dict(solves=0))
 hover_wh_s = (veh.energy_model().power_ref_w * (veh.weight_n / veh.energy_model().thrust_ref_n) ** 1.5
               + veh.energy_model().auxiliary_w) / 3600.0
 fig, ax = plt.subplots(figsize=(4.2, 2.3))
 for i, (t, c) in enumerate(curves):
     ax.plot(t, c, color=C["grey"], lw=0.7, alpha=0.7, label="Dispersed starts" if i == 0 else None)
     ax.plot(t[:1], c[:1], ".", ms=3, color=C["grey"])
-ax.plot(ref_t[ref_ok], ref_c[ref_ok], color=C["blue"], lw=1.4, label="Start of Fig. 6")
+ax.plot(ref_t[ref_ok], ref_c[ref_ok], color=C["blue"], lw=1.4, label="Reference start (8, 5, 18) m")
 ax.plot([ref_plan.duration], [ref_plan.cost], "o", ms=4.5, color=C["orange"], label=f"Line search: {ref_plan.duration:.2f} s")
-ax.axvspan(ref_t[0] - 1.0, t_min, color=C["red"], alpha=0.10, lw=0)
+if fine is not None:
+    ax.plot(fine_t, fine.cost, "+", ms=5, color=C["blue"], label=f"Fixed-duration check: {fine_t:.2f} s")
 ax.set_xlim(2.0, 30.0)
 ax.set_xlabel(r"Landing duration $t_f$ (s)")
 ax.set_ylabel("Planned energy (Wh)")
 ax.legend(loc="lower right", frameon=False, fontsize=6.5)
 fig.tight_layout()
 fig.savefig(FIGURES / "duration_search.pdf")
-print(f"reference start: infeasible below {t_min:.2f} s; line search {ref_plan.duration:.2f} s ({ref_plan.cost:.4f} Wh) vs "
+print(f"reference start: first solved grid sample {first_grid:.2f} s; line search {ref_plan.duration:.2f} s ({ref_plan.cost:.4f} Wh) vs "
       f"grid minimum {ref_c[ref_ok][0]:.4f} Wh; hover power {hover_wh_s:.4f} Wh/s")
+if fine is not None:
+    print(f"reference fixed-duration check: {fine_t:.2f} s, {fine.cost:.4f} Wh, node gap {fine.convexification_gap:.2e}")
 print(f"duration structure over {checked} starts (0.5 s grid, 2-30 s): feasible set not an interval in {holes}, "
       f"cost not non-decreasing beyond the boundary in {nonmono}; slope {np.median(slopes):.3f} Wh/s median "
       f"({np.min(slopes):.3f}..{np.max(slopes):.3f})")
